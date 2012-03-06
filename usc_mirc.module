@@ -1,0 +1,10 @@
+<?php
+
+function usc_mirc_islandora_content_model_forms_get_transforms() {
+  $p = drupal_get_path('module', 'usc_mirc') . '/transforms';
+  return array(
+    "$p/eaccpf_to_dc.xsl" => "eaccpf_to_dc.xsl (usc_mirc)",
+    "$p/pbcore_to_dc.xsl" => "pbcore_to_dc.xsl (usc_mirc)"
+  );
+}
+

@@ -1,0 +1,5 @@
+name = Extensions for MIRC at USC
+description = Various code stuffs...
+package = Fedora Repository
+version = 6.1dev
+core = 6.x
