@@ -1,5 +1,11 @@
 <?php
 
+function usc_mirc_perm() {
+  return array(
+    'access mezzanines'
+  );
+}
+
 function usc_mirc_islandora_content_model_forms_get_transforms() {
   $p = drupal_get_path('module', 'usc_mirc') . '/transforms';
   return array(
@@ -8,3 +14,258 @@ function usc_mirc_islandora_content_model_forms_get_transforms() {
   );
 }
 
+function usc_mirc_theme() {
+  return array(
+    'usc_mirc_item' => array(
+      'arguments' => array('element' => NULL)
+    )
+  );
+}
+
+function theme_usc_mirc_item($element) {
+  //dsm($element);
+  $map = $element['#user_data'];
+  $pbcore = $map['pbcore'];
+  
+  //Obtain a traversable list of contexts
+  $context = array($pbcore->document->documentElement);
+  if (!empty($map['context_xpath'])) {
+    $context = $pbcore->query($map['context_xpath']);
+  }
+
+  $temp = array();
+  foreach ($context as $con) {
+    $results = $pbcore->query($map['xpath'], $con);
+    
+    foreach($results as $result) {
+      //dsm($result, 'result');
+      $text = $result->textContent;
+      if (!empty($text)) {
+        $temp[] = $text;
+      }
+    }
+  }
+  
+  if (count($temp) === 1) {
+    $element['#value'] = $temp[0];
+  } 
+  elseif (count($temp) > 1) {
+    $element['#value'] = theme('item_list', $temp);
+  }
+  
+  if (!empty($element['#value'])) {
+    return theme('form_element', $element, $element['#value'] . (!empty($element['#children']) ? $element['#children'] : ''));
+  }
+}
+/**
+ * php functions used in XPath...
+ */
+function usc_mirc_create_person_string($name, $role) {
+  $output = $name;
+  if (!empty($output) && !empty($role)) {
+    $output .= " ($role)";
+  }
+  //dsm($output, 'output');
+  return new DOMText($output);
+}
+
+function usc_mirc_create_date_string($start, $end) {
+  $output = '';
+  if (!empty($start) || !empty($end)) {
+    if (strcmp($start, $end) === 0) { //They're provided and the same...
+      $output = $start;
+    }
+    else { //At least a partial range
+      $output = "$start/$end";
+    }
+  }
+  return new DOMText($output);
+}
+
+function usc_mirc_tabs_alter(&$element) {
+  //dsm($element);
+  
+  //Change to the Edit tab if necessary
+  $edit =& $element['edit_metadata']['content']['pid'];
+  if (!empty($edit)) {
+    foreach ($element as $name => &$child) {
+      if (strpos($name, '#') === 0) {
+        continue;
+      }
+      elseif ($child['#type'] === 'tabpage') {
+        $child['#selected'] = FALSE;
+      }
+    }
+    
+    $element['edit_metadata']['#selected'] = TRUE;
+  }
+  
+  //Remove the DC section in 'Object Details' tab...
+  //XXX: Relies upon a slight modification in FedoraObjectDetailedContent, which splits up the dc, ds list and purge form into separate children.
+  $dc = $element['fedora_object_details']['tabset']['view']['dc'];
+
+  if (!empty($dc) && $dc['#type'] === 'markup') {
+    unset($element['fedora_object_details']['tabset']['view']['dc']);
+  }
+}
+
+/** Duplication of drupal_get_form; however, we exit early so other fun can happen. (Also skip a bit of batch stuff)
+ *  "Fun stuff" such as being able to switch tabs based on the contents of the form...  Then again, that could probably be done in the alter function above...  Hmmm...
+ */
+function _usc_mirc_get_unrendered_form($form_id) {
+  $form_state = array(
+    'storage' => NULL,
+    'submitted' => FALSE,
+  );
+
+  $args = func_get_args();
+  $cacheable = FALSE;
+  
+  // If the incoming $_POST contains a form_build_id, we'll check the
+  // cache for a copy of the form in question. If it's there, we don't
+  // have to rebuild the form to proceed. In addition, if there is stored
+  // form_state data from a previous step, we'll retrieve it so it can
+  // be passed on to the form processing code.
+  if (isset($_POST['form_id']) && $_POST['form_id'] == $form_id && !empty($_POST['form_build_id'])) {
+    $form = form_get_cache($_POST['form_build_id'], $form_state);
+  }
+
+  // If the previous bit of code didn't result in a populated $form
+  // object, we're hitting the form for the first time and we need
+  // to build it from scratch.
+  if (!isset($form)) {
+    $form_state['post'] = $_POST;
+    // Use a copy of the function's arguments for manipulation
+    $args_temp = $args;
+    $args_temp[0] = &$form_state;
+    array_unshift($args_temp, $form_id);
+
+    $form = call_user_func_array('drupal_retrieve_form', $args_temp);
+    $form_build_id = 'form-' . md5(uniqid(mt_rand(), TRUE));
+    $form['#build_id'] = $form_build_id;
+    drupal_prepare_form($form_id, $form, $form_state);
+    // Store a copy of the unprocessed form for caching and indicate that it
+    // is cacheable if #cache will be set.
+    $original_form = $form;
+    $cacheable = TRUE;
+    unset($form_state['post']);
+  }
+  $form['#post'] = $_POST;
+
+  // Now that we know we have a form, we'll process it (validating,
+  // submitting, and handling the results returned by its submission
+  // handlers. Submit handlers accumulate data in the form_state by
+  // altering the $form_state variable, which is passed into them by
+  // reference.
+  drupal_process_form($form_id, $form, $form_state);
+  if ($cacheable && !empty($form['#cache'])) {
+    // Caching is done past drupal_process_form so #process callbacks can
+    // set #cache.
+    form_set_cache($form_build_id, $original_form, $form_state);
+  }
+
+  // Most simple, single-step forms will be finished by this point --
+  // drupal_process_form() usually redirects to another page (or to
+  // a 'fresh' copy of the form) once processing is complete. If one
+  // of the form's handlers has set $form_state['redirect'] to FALSE,
+  // the form will simply be re-rendered with the values still in its
+  // fields.
+  //
+  // If $form_state['storage'] or $form_state['rebuild'] has been set
+  // and input has been processed, we know that we're in a complex
+  // multi-part process of some sort and the form's workflow is NOT
+  // complete. We need to construct a fresh copy of the form, passing
+  // in the latest $form_state in addition to any other variables passed
+  // into drupal_get_form().
+
+  if ((!empty($form_state['storage']) || !empty($form_state['rebuild'])) && !empty($form_state['process_input']) && !form_get_errors()) {
+    $form = drupal_rebuild_form($form_id, $form_state, $args);
+  }
+  
+  return $form;
+}
+
+function usc_mirc_form_fedora_repository_ingest_form_alter(&$form, &$form_state) {
+  //dd($form_state['storage'], 'fdsa');
+  if (in_array($form_state['storage']['content_model'], array(/*'usc:test-vro',*/ 'usc:test-mezzanine', 'usc:test-access'))) {
+    //dd($form, 'asdf');
+    $form_state['storage']['pid_namespace'] = 'usc-test';
+    $form_state['storage']['parent_relation'] = 'isDerivativeOf';
+  }
+}
+
+function usc_mirc_menu() {
+  return array(
+    'usc/streaming_autocomplete' => array(
+      'page callback' => 'usc_mirc_autocomplete_streaming_url',
+      'access arguments' => array('access content'),
+    )
+  );
+}
+
+function usc_mirc_redirect_form(&$form_state, $parent_pid) {
+  return array(
+    'parent_pid' => array(
+      '#type' => 'hidden',
+      '#value' => $parent_pid,
+    ),
+    'title' => array(
+      '#type' => 'textfield',
+      '#title' => t('Object label'),
+      '#required' => TRUE,
+    ),
+    'streaming_url' => array(
+      '#type' => 'textfield',
+      '#title' => t('Streaming URL'),
+      '#required' => TRUE,
+      '#autocomplete_path' => 'usc/streaming_autocomplete',
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => 'Ingest',
+    )
+  );
+}
+
+function usc_mirc_redirect_form_submit($form, &$form_state) {
+  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  
+  $values = $form_state['values'];
+  
+  $pid_namespace = 'usc-test'; //XXX:  This should probably be pulled in from a constant...
+  $pid = Fedora_Item::get_next_PID_in_namespace($pid_namespace);
+  
+  global $user;
+  $new_item = Fedora_Item::ingest_new_item($pid, 'A', $values['title'], $user->name);
+  
+  $new_item->add_datastream_from_url($values['streaming_url'], 'VIDEO', 'Video Redirect', 'video/mp4', 'R', 'Added from Islandora');
+  $new_item->add_relationship('isDerivativeOf', $values['parent_pid']);
+}
+
+function usc_mirc_autocomplete_streaming_url($string) {
+  //Get the contents of whatever directory
+  
+  $sb = 'http://dvr-streaming.mirc.sc.edu';
+  $fsb = '/mnt/mirc/mezz/access';
+  $dir = dir($fsb);
+  $videos = array();
+  while ($entry = $dir->read()) {
+    if (strpos($entry, $string) === 0 &&
+      in_array(substr($entry, -4), array('.m4v', '.mp4', '.flv', '.mov'))) {
+      $entry = "$sb/$entry";
+      $videos[$entry] = $entry;
+    }
+  }
+  $dir->close();
+  
+  //Return JSON object of 
+  //{
+  //  url_1: url_1,
+  //  url_2: url_2,
+  //  ...
+  //}
+  ksort($videos);
+  drupal_json($videos);
+  //exit();
+  return;
+}
