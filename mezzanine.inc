@@ -395,10 +395,13 @@ $(function() {
     //Product key (for sc.edu)
     key: "#$60fe88f4c446bc34a1c",
     
-    // configure clip to use "lighthttpd" plugin for providing video data
     clip: {
-      provider: 'lighttpd',
-      scaling: 'fit'
+      provider: 'lighttpd', // configure clip to use "lighthttpd" plugin for providing video data
+      scaling: 'fit', //Maintain aspect ratio when scaling
+    },
+    canvas: { //Use a full-black background
+      background: '#000000',
+      backgroundGradient: 'none',
     },
 
     // streaming plugins are configured normally under the plugins node
