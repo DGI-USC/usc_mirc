@@ -1,0 +1,25 @@
+
+.usc-mirc-solr-results li {
+  float: left;
+  clear: left;
+  width: 100%;
+}
+
+.usc-mirc-solr-results li > * {
+  display: block;
+}
+
+.usc-mirc-solr-results li a > img {
+  float: left;
+  margin: 1em;
+}
+
+.usc-mirc-solr-results li.odd {
+  background-color: #EFEFEF;
+}
+
+.usc-mirc-solr-results .usc-mirc-text-block,
+.usc-mirc-solr-results .usc-mirc-text-block .form-item {
+  margin: .5em;
+  display: block;
+}

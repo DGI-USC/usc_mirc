@@ -253,7 +253,7 @@ abstract class BaseVideoDisplay {
           ),
           '#weight' => $i++,
         ),*/
-        array(
+        /*array(
           '#title' => t('Instantiation info'),
           '#type' => 'item',
           '#value' => '(Not quite sure how to show it...)',
@@ -262,7 +262,7 @@ abstract class BaseVideoDisplay {
             'xpath' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRelation[@relationType="isMemberOfCollection"]' 
           ),
           '#weight' => $i++,
-        ),
+        ),*/
       );
       
       return $functional_mapping;
@@ -397,7 +397,8 @@ $(function() {
     
     // configure clip to use "lighthttpd" plugin for providing video data
     clip: {
-      provider: 'lighttpd'
+      provider: 'lighttpd',
+      scaling: 'fit'
     },
 
     // streaming plugins are configured normally under the plugins node
@@ -480,10 +481,19 @@ EOJS
         ),
         '#weight' => $i++,
       );
-      $output['date'] = array(
+      /*$output['date'] = array(
         '#type' => 'item',
         '#title' => t('Date'),
         '#value' => 'A date or sommat'
+      );*/
+      $output['item_title'] = array(
+        '#title' => t('Item Title'),
+        '#type' => 'usc_mirc_item',
+        '#user_data' => array(
+          'pbcore' => $pbcore,
+          'xpath' => '/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@titleType="Item"]/text()'
+        ),
+        '#weight' => $i++,
       );
       $output['description'] = array(
         '#type' => 'usc_mirc_item',
@@ -491,7 +501,8 @@ EOJS
         '#user_data' => array(
           'pbcore' => $pbcore,
           'xpath' => '/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="summary"]/text()'
-        )
+        ),
+        '#weight' => $i++,
       );
     }
     
@@ -516,19 +527,21 @@ class IslandoraVRO extends BaseVideoDisplay {
     $i = 0;
     
     //1. Show the metadata about this object
-    $tabset['view_metadata'] = array(
-      '#type' => 'tabpage',
-      '#title' => t('Metadata'),
-      '#selected' => TRUE,
-      'content' => array_merge(array(
-        '#type' => 'fieldset',
-        '#title' => 'PBCore'
+    if (TRUE) {
+      $tabset['view_metadata'] = array(
+        '#type' => 'tabpage',
+        '#title' => t('Metadata'),
+        '#selected' => TRUE,
+        'content' => array_merge(array(
+          '#type' => 'fieldset',
+          '#title' => 'PBCore'
+          ),
+          $this->_renderPBCore()
         ),
-        $this->_renderPBCore()
-      ),
-      '#weight' => $i++,
-      '#tab_name' => 'view_metadata'
-    );
+        '#weight' => $i++,
+        '#tab_name' => 'view_metadata'
+      );
+    }
     
     if (user_access('edit fedora meta data')) {
       //$form = drupal_get_form('fedora_repository_edit_qdc_form', $this->pid, 'PBCORE');
@@ -545,19 +558,21 @@ class IslandoraVRO extends BaseVideoDisplay {
       );
     }
     //2.1 Perform a query to get the list of all mezzanines of the current VRO.  If none, don't draw the tab.
-    $derivatives = $this->_getDerivatives();
-    if (count($derivatives) > 0) {
-      $tabset['tab-' . $i] = array(
-        '#type' => 'tabpage',
-        '#title' => t('Mezzanines'), 
-        '#selected' => FALSE,
-        '#content' => $this->_renderDerivatives($derivatives),
-        '#weight' => $i++
-      );
+    if (user_access('view fedora collection')) {
+      $derivatives = $this->_getDerivatives();
+      if (count($derivatives) > 0) {
+        $tabset['tab-' . $i] = array(
+          '#type' => 'tabpage',
+          '#title' => t('Mezzanines'), 
+          '#selected' => FALSE,
+          '#content' => $this->_renderDerivatives($derivatives),
+          '#weight' => $i++
+        );
+      }
     }
     
     //2.2 Create a tab for the list of access copies
-    if (user_access('view fedora collection')) {
+    if (user_access('view detailed list of content')) {
       //This seems like a stupid way to do this, but I want to get the list of access copies...  Blargh.
       $derivatives = $this->_getDerivatives(<<<EOQ
 ?sub fre:isDerivativeOf <info:fedora/{$this->pid}> ;
@@ -614,9 +629,11 @@ EOQ
       $item = new Fedora_Item($this->pid);
       
       $url = url(variable_get('fedora_base_url', 'http://localhost:8080/fedora') . "/objects/{$pid}/datastreams/PBCORE/content"); //Get from the parent by default.
-      if (array_key_exists('PBCORE', $item->get_datastreams_list_as_array())) { //Get from the current object if it exists.
+     /* 
+     //Get the PBCore from this (mezzanine) object, if it exists.
+     if (array_key_exists('PBCORE', $item->get_datastreams_list_as_array())) { //Get from the current object if it exists.
         $url = url(variable_get('fedora_base_url', 'http://localhost:8080/fedora') . "/objects/{$this->pid}/datastreams/PBCORE/content");
-      }
+      }*/
       
       self::_user_agent_hack();
       return DOMDocument::load($url);
@@ -649,31 +666,37 @@ EOQ
     $tabset = array();
     $i = 0;
     
-    $tabset['tab-' . $i++] = array(
-      '#type' => 'tabpage',
-      '#title' => t('Play'),
-      '#selected' => TRUE,
-      'player' => $this->_player($this->_getAccessVideoPaths()),
-      'metadata' => $this->_shortMetadata()
-    );
-    //1. Show the metadata about this object
-    $tabset['tab-' . $i] = array(
-      '#type' => 'tabpage',
-      '#title' => t('Metadata'),
-      '#selected' => TRUE,
-      'content' => $this->_renderPBCore(),
-      '#weight' => $i++
-    );
-    //2. Perform a query to get the list of all mezzanines of the current VRO.  If none, don't draw the tab.
-    $derivatives = $this->_getDerivatives();
-    if (count($derivatives) > 0) {
+    if (user_access('view fedora collection')) {
+      $tabset['tab-' . $i++] = array(
+        '#type' => 'tabpage',
+        '#title' => t('Play'),
+        '#selected' => TRUE,
+        'player' => $this->_player($this->_getAccessVideoPaths()),
+        'metadata' => $this->_shortMetadata()
+      );
+      
+      //1. Show the metadata about this object
       $tabset['tab-' . $i] = array(
         '#type' => 'tabpage',
-        '#title' => t('Access variants'), 
-        '#selected' => FALSE,
-        '#content' => $this->_renderDerivatives($derivatives),
+        '#title' => t('Metadata'),
+        '#selected' => TRUE,
+        'content' => $this->_renderPBCore(),
         '#weight' => $i++
       );
+    }
+    
+    //2. Perform a query to get the list of all access copies of the current mezzanine.  If none, don't draw the tab.
+    if (user_access('view detailed list of content')) {
+      $derivatives = $this->_getDerivatives();
+      if (count($derivatives) > 0) {
+        $tabset['tab-' . $i] = array(
+          '#type' => 'tabpage',
+          '#title' => t('Access variants'), 
+          '#selected' => FALSE,
+          '#content' => $this->_renderDerivatives($derivatives),
+          '#weight' => $i++
+        );
+      }
     }
     
     //3. Allow the addition of variants (show according to permissions)
@@ -683,6 +706,17 @@ EOQ
       $tabset['tab-' . $i] = array(
         '#type' => 'tabpage',
         '#title' => t('Add an access variant'),
+        '#selected' => FALSE,
+        'content' => $d_form,
+        '#weight' => $i++
+      );
+    
+      //Allow migration of mezzanines to their proper collection
+      $d_form = _usc_mirc_get_unrendered_form('usc_mirc_switch_mezzanine_collection', $this->pid);
+      //dsm($d_form);
+      $tabset['tab-' . $i] = array(
+        '#type' => 'tabpage',
+        '#title' => t('Migrate to collection'),
         '#selected' => FALSE,
         'content' => $d_form,
         '#weight' => $i++

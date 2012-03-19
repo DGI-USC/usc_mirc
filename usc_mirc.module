@@ -227,6 +227,40 @@ function usc_mirc_redirect_form(&$form_state, $parent_pid) {
   );
 }
 
+function usc_mirc_switch_mezzanine_collection(&$form_state, $object_pid) {
+  return array(
+    'object_pid' => array(
+      '#type' => 'hidden',
+      '#value' => $object_pid,
+    ),
+    'collection' => array(
+      '#type' => 'select',
+      '#title' => t('New collection'),
+      '#description' => t('The collection to which this object should be moved.'),
+      '#options' => array( //Need to get this list programmatically.
+        'usc:movietone' => 'Fox Movietone News collection 1919-1934, 1942-1944',
+        'usc:gibbes' => 'Heyward Gibbes collection, 1926-1945',
+        'usc:wis' => 'Local Television News: WIS',
+        'usc:vishniac' => 'Roman Vishniac film collection, 1958-1990',
+      ),
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Move!')
+    )
+  );
+}
+
+function usc_mirc_switch_mezzanine_collection_submit($form, &$form_state) {
+  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  
+  $values = $form_state['values'];
+  
+  $item = new Fedora_Item($values['object_pid']);
+  $item->purge_relationship('fedora:isMemberOfCollection', '');
+  $item->add_relationship('isMemberOfCollection', $values['collection']);
+}
+
 function usc_mirc_redirect_form_submit($form, &$form_state) {
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   
@@ -250,10 +284,10 @@ function usc_mirc_autocomplete_streaming_url($string) {
   $dir = dir($fsb);
   $videos = array();
   while ($entry = $dir->read()) {
-    if (strpos($entry, $string) === 0 &&
+    if ((strpos($entry, $string) === 0 || $string === '*') &&
       in_array(substr($entry, -4), array('.m4v', '.mp4', '.flv', '.mov'))) {
-      $entry = "$sb/$entry";
-      $videos[$entry] = $entry;
+      
+      $videos["$sb/$entry"] = $entry;
     }
   }
   $dir->close();
@@ -268,4 +302,17 @@ function usc_mirc_autocomplete_streaming_url($string) {
   drupal_json($videos);
   //exit();
   return;
+}
+
+function usc_mirc_islandora_solr_primary_display() {
+  return array(
+    'usc_mirc_display' => array(
+      'name' => t('USC display'),
+      'module' => 'usc_mirc',
+      'file' => 'SolrResults.inc',
+      'class' => 'USC_Results',
+      'function' => 'displayResults',
+      'description' => t('More specific output.'),
+    ),
+  );
 }
