@@ -427,7 +427,7 @@ EOJS
         '#attributes' => array(
           'class' => $player_class
         ),
-        '#value' => "<a class='$player_class' href='{$videos[0]}' style='display: block; width: 480px; height: 360px'><img src='http://dvr-web.mirc.sc.edu/sites/all/themes/usc/logo.png' alt='Video placeholder' width='480' height='360'></img></a>",
+        '#value' => "<a class='$player_class' href='{$videos[0]}' style='display: block; width: 480px; height: 360px'><img src='$mod_path/images/playbuttonblack.jpg' alt='Video placeholder' width='480' height='360'></img></a>",
       );
       
       $output['carousel'] = array(
