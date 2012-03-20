@@ -500,6 +500,24 @@ EOJS
         ),
         '#weight' => $i++,
       );
+      $output['temporal_coverage'] = array(
+        '#title' => t('Date'),
+        '#type' => 'usc_mirc_item',
+        '#user_data' => array(
+          'pbcore' => $pbcore,
+          'xpath' => '/pb:pbcoreDescriptionDocument/pb:pbcoreCoverage[pb:coverageType/text()="temporal"]/pb:coverage/text()'
+        ),
+        '#weight' => $i++,
+      );
+      $output['sound_content'] = array(
+        '#title' => t('Silent or Sound'),
+        '#type' => 'usc_mirc_item',
+        '#user_data' => array(
+          'pbcore' => $pbcore,
+          'xpath' => '/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="sound content"]/text()'
+        ),
+        '#weight' => $i++,
+      );
       $output['description'] = array(
         '#type' => 'usc_mirc_item',
         '#title' => t('Description'),
