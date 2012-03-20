@@ -4,7 +4,8 @@
     xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/dc/" 
     xmlns:dcterms="http://purl.org/dc/terms/"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:pbcore="http://www.pbcore.org/PBCore/PBCoreNamespace.html">
+    xmlns:pb="http://www.pbcore.org/PBCore/PBCoreNamespace.html"
+    exclude-result-prefixes="pb">
     <xsl:output method="xml" indent="yes" />
     <xsl:template match="text()" />
     <xsl:template match="/">
@@ -13,76 +14,91 @@
         </oai_dc:dc>
     </xsl:template>
     
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreIdentifier">
-        <dc:identifier>
-            <xsl:value-of select="." />
-        </dc:identifier>
+    <xsl:template match="/pb:pbcoreDescriptionDocument">
+      <dc:type>Collection</dc:type>
+      <dc:type>Text</dc:type>
+      <xsl:apply-templates/>
     </xsl:template>
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreTitle[@titleType='Main']">
+    
+    <xsl:template match="/pb:pbcoreInstantiationDocument | pb:pbcoreInstantiation">
+      <dc:type>MovingImage</dc:type>
+      <xsl:apply-templates/>
+    </xsl:template>
+    
+    <xsl:template match="pb:pbcoreIdentifier[normalize-space(text())] | pb:instantiationIdentifier[not(@source='instantiation_title')][normalize-space(text())]">
+        <dc:identifier><xsl:value-of select="normalize-space(text())"/></dc:identifier>
+    </xsl:template>
+    <xsl:template match="pb:pbcoreTitle[@titleType='Main'][normalize-space(text())] | pb:instantiationIdentifier[@source='instantiation_title'][normalize-space(text())]">
         <dc:title>
-            <xsl:value-of select="." />
+            <xsl:value-of select="normalize-space(text())"/>
         </dc:title>
     </xsl:template>
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreTitle[@titleType!='Main']">
-      <dc:alternative>
-        <xsl:value-of select="text()"/>
-      </dc:alternative>
+    
+    <xsl:template match="pb:pbcoreTitle[not(@titleType='Main') and normalize-space(text())]">
+      <dc:alternative><xsl:value-of select="normalize-space(text())"/></dc:alternative>
     </xsl:template>
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreSubject">
-        <dc:subject>
-            <xsl:value-of select="." />
-        </dc:subject>
+    <xsl:template match="pb:pbcoreSubject[normalize-space(text())]">
+      <dc:subject><xsl:value-of select="normalize-space(text())"/></dc:subject>
     </xsl:template>
     
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreDescription[@descriptionType = 'Abstract']">
-        <dc:description>
-            <xsl:value-of select="." />
-        </dc:description>
+    <xsl:template match="pb:pbcoreDescription[@descriptionType='Abstract' and normalize-space(text())] | pb:instantiationAnnotation[@annotationType='abstract' and normalize-space(text())]">
+      <dc:description><xsl:value-of select="normalize-space(text())"/></dc:description>
     </xsl:template>
     
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreGenre">
-        <dc:subject>       <xsl:value-of select="." />
-        </dc:subject>
+    <xsl:template match="pb:pbcoreGenre[normalize-space(text())]">
+      <dc:subject><xsl:value-of select="normalize-space(text())"/></dc:subject>
     </xsl:template>
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreCoverage/pbcore:coverage">
-        <dc:coverage>
-       <xsl:value-of select="." />
-        </dc:coverage>
-    </xsl:template>
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreCreator">
-        <dc:creator>
-            <xsl:value-of select="pbcore:creator" /> - <xsl:value-of select="pbcore:creatorRole" />
-        </dc:creator>
-    </xsl:template>
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreContributor[1]">
-        <dc:contributor>
-            <xsl:value-of select="pbcore:contributor" /> - <xsl:value-of select="pbcore:contributorRole" />
-        </dc:contributor>
+    <xsl:template match="pb:pbcoreCoverage/pb:coverage[normalize-space(text())]">
+      <dc:coverage><xsl:value-of select="normalize-space(text())"/></dc:coverage>
     </xsl:template>
 
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreRightsSummary">
-        <dc:rights><xsl:value-of select="pbcore:rightsSummary" /></dc:rights>
+    <xsl:template match="pb:pbcoreCreator">
+      <xsl:variable name="person" select="normalize-space(pb:creator)"/>
+      <xsl:variable name="role">
+        <xsl:choose>
+          <xsl:when test="normalize-space(pb:creatorRole)"><xsl:value-of select="normalize-space(pb:creatorRole)"/></xsl:when>
+          <xsl:otherwise>No role provided</xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      
+      <xsl:if test="$person">
+        <dc:creator><xsl:value-of select="$person"/> (<xsl:value-of select="$role"/>)</dc:creator>
+      </xsl:if>
+    </xsl:template>    
+    <xsl:template match="pb:pbcoreContributor">
+      <xsl:variable name="person" select="normalize-space(pb:contributor)"/>
+      <xsl:variable name="role">
+        <xsl:choose>
+          <xsl:when test="normalize-space(pb:contributorRole)"><xsl:value-of select="normalize-space(pb:contributorRole)"/></xsl:when>
+          <xsl:otherwise>No role provided</xsl:otherwise>
+        </xsl:choose>
+      </xsl:variable>
+      
+      <xsl:if test="$person">
+        <dc:contributor><xsl:value-of select="$person"/> (<xsl:value-of select="$role"/>)</dc:contributor>
+      </xsl:if>
+    </xsl:template>
+
+    <xsl:template match="pb:pbcoreRightsSummary[normalize-space(text())] | pb:instantiationRights[normalize-space(text())]">
+        <dc:rights><xsl:value-of select="normalize-space(pb:rightsSummary/text())"/></dc:rights>
     </xsl:template>
     
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreInstantiation[1]/pbcore:instantiationDate">
-        <dc:date><xsl:value-of select="." /></dc:date>
+    <xsl:template match="pb:pbcoreAssetDate[normalize-space(text())] | pb:instantiationDate[normalize-space(text())]">
+        <dc:date><xsl:value-of select="normalize-space(text())"/></dc:date>
     </xsl:template>
-    <xsl:template
-        match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreInstantiation[1]/pbcore:instantiationGenerations">
-        <dc:type><xsl:value-of select="." /></dc:type>
+    <xsl:template match="pb:instantiationGenerations[normalize-space(text())]">
+        <dc:type><xsl:value-of select="normalize-space(text())" /></dc:type>
     </xsl:template>
-    <xsl:template
-        match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreInstantiation[1]/pbcore:instantiationMediaType">
-        <dc:type><xsl:value-of select="." /></dc:type>
-    </xsl:template>
-    <xsl:template
-        match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreInstantiation[1]/pbcore:instantiationDuration">
-        <dc:format><xsl:value-of select="." /></dc:format>
+    <xsl:template match="pb:instantiationMediaType[normalize-space(text())]">
+        <dc:type><xsl:value-of select="normalize-space(text())" /></dc:type>
     </xsl:template>
     
-    <xsl:template match="/pbcore:pbcoreDescriptionDocument/pbcore:pbcoreInstantiation[1]/pbcore:instantiationLanguage">
-        <dc:language><xsl:value-of select="." /></dc:language>
+    <xsl:template match="pb:instantiationLanguage[normalize-space(text())]">
+        <dc:language><xsl:value-of select="normalize-space(text())" /></dc:language>
     </xsl:template>
         
+    <xsl:template match="*">
+      <xsl:apply-templates/>
+    </xsl:template>
 </xsl:stylesheet>
 
