@@ -135,7 +135,7 @@ abstract class BaseVideoDisplay {
           '#weight' => $i++,
         ),
         array(
-          '#title' => t('Physical Properties: Sound'),
+          '#title' => t('Silent or Sound'),
           '#type' => 'usc_mirc_item',
           '#user_data' => array(
             'pbcore' => $pbcore,
@@ -423,6 +423,7 @@ EOJS
         'class' => 'usc-mirc-player',
         'style' => 'float: left'
       ),
+      '#weight' => -1,
     );
     if (count($videos) > 0) {
       $output['player'] = array(
@@ -460,6 +461,7 @@ EOJS
           'class' => 'usc-mirc-metadata',
           'style' => 'float: left'
         ),
+        '#weight' => 0
     );
     if ($pbcore === FALSE || $pbcore === NULL) {
       //Error
@@ -670,21 +672,24 @@ EOQ
     $i = 0;
     
     if (user_access('view fedora collection')) {
-      $tabset['tab-' . $i++] = array(
+      $tabset['view_player'] = array(
         '#type' => 'tabpage',
         '#title' => t('Play'),
         '#selected' => TRUE,
+        '#weight' => $i++,
+        '#tab_name' => 'view-player',
         'player' => $this->_player($this->_getAccessVideoPaths()),
         'metadata' => $this->_shortMetadata()
       );
       
       //1. Show the metadata about this object
-      $tabset['tab-' . $i] = array(
+      $tabset['view_metadata'] = array(
         '#type' => 'tabpage',
         '#title' => t('Metadata'),
         '#selected' => TRUE,
         'content' => $this->_renderPBCore(),
-        '#weight' => $i++
+        '#weight' => $i++,
+        '#tab_name' => 'view-metadata'
       );
     }
     
