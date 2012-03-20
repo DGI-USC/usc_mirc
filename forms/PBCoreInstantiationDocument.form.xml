@@ -1,0 +1,1549 @@
+<?xml version="1.0"?>
+<definition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2">
+  <properties>
+    <root_name>pbcoreInstantiationDocument</root_name>
+    <schema_uri>http://pbcore.org/xsd/pbcore-2.0.xsd</schema_uri>
+    <namespaces default="http://www.pbcore.org/PBCore/PBCoreNamespace.html">
+      <namespace prefix="pb">http://www.pbcore.org/PBCore/PBCoreNamespace.html</namespace>
+    </namespaces>
+  </properties>
+  <form>
+    <properties>
+      <type>form</type>
+      <access>TRUE</access>
+      <required>FALSE</required>
+      <title>PBCore Instantiation Document</title>
+      <tree>TRUE</tree>
+      <actions>
+        <create>NULL</create>
+        <read>
+          <path>/pb:pbcoreInstantiationDocument</path>
+          <context>document</context>
+        </read>
+        <update>NULL</update>
+        <delete>NULL</delete>
+      </actions>
+    </properties>
+    <children>
+      <element name="title">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <description>Title for this particular instantiation.</description>
+          <required>TRUE</required>
+          <title>Title</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationIdentifier source="instantiation_title"&gt;%value%&lt;/pb:instantiationIdentifier&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationIdentifier[@source="instantiation_title"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="description">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <description>A short description for this instantiation.</description>
+          <required>FALSE</required>
+          <title>Description/Abstract</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationAnnotation annotationType="abstract"&gt;%value%&lt;/pb:instantiationAnnotation&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationAnnotation[@annotationType="abstract"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="accession_num">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <description>For multi-reel films, use root number without r# suffix.</description>
+          <required>FALSE</required>
+          <title>Accession Number</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationIdentifier source="film_accession_number"&gt;%value%&lt;/pb:instantiationIdentifier&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationIdentifier[@source="film_accession_number"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="barcode">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <description>For multi-reel films, leave blank.</description>
+          <required>FALSE</required>
+          <title>Barcode</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationIdentifier source="barcode"&gt;%value%&lt;/pb:instantiationIdentifier&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationIdentifier[@source="barcode"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="barcode_annotation">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Other Items on the Same Reel</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()/pb:instantiationIdentifier[@source="barcode"]</path>
+              <context>parent</context>
+              <schema/>
+              <type>attribute</type>
+              <prefix>NULL</prefix>
+              <value>annotation</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationIdentifier[@source="barcode"]/@annotation</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>NULL</delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="tape_num">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Tape Number</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationIdentifier source="tape_number"&gt;%value%&lt;/pb:instantiationIdentifier&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationIdentifier[@source="tape_number"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="location">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <default_value>Moving Image Research Collections</default_value>
+          <required>FALSE</required>
+          <title>Location</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>element</type>
+              <prefix>NULL</prefix>
+              <value>instantiationLocation</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationLocation</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="parts">
+        <properties>
+          <type>tabs</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Reels</title>
+          <tree>TRUE</tree>
+        </properties>
+        <children>
+          <element name="0">
+            <properties>
+              <type>tabpanel</type>
+              <access>TRUE</access>
+              <required>FALSE</required>
+              <tree>TRUE</tree>
+              <actions>
+                <create>
+                  <path>self::node()</path>
+                  <context>parent</context>
+                  <schema/>
+                  <type>element</type>
+                  <prefix>NULL</prefix>
+                  <value>instantiationPart</value>
+                </create>
+                <read>
+                  <path>self::node()/pb:instantiationPart</path>
+                  <context>parent</context>
+                </read>
+                <update>
+                  <path>self::node()</path>
+                  <context>self</context>
+                </update>
+                <delete>
+                  <path>self::node()</path>
+                  <context>self</context>
+                </delete>
+              </actions>
+            </properties>
+            <children>
+              <element name="part_id">
+                <properties>
+                  <type>textfield</type>
+                  <access>TRUE</access>
+                  <description>Full accession number, including r# suffix.</description>
+                  <required>FALSE</required>
+                  <title>Reel Accession Number</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>instantiationIdentifier</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:instantiationIdentifier</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="part_barcode">
+                <properties>
+                  <type>textfield</type>
+                  <access>TRUE</access>
+                  <required>FALSE</required>
+                  <title>Reel Barcode</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>instantiationIdentifier</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:instantiationIdentifier</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="part_time_annotation">
+                <properties>
+                  <type>textfield</type>
+                  <access>TRUE</access>
+                  <description>Round to the nearest foot.</description>
+                  <required>FALSE</required>
+                  <title>Reel Length in Feet</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>attribute</type>
+                      <prefix>NULL</prefix>
+                      <value>timeAnnotation</value>
+                    </create>
+                    <read>
+                      <path>self::node()/@timeAnnotation</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>NULL</delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="part_location">
+                <properties>
+                  <type>textfield</type>
+                  <access>TRUE</access>
+                  <default_value>Moving Image Research Collections</default_value>
+                  <required>FALSE</required>
+                  <title>Part Location</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>instantiationLocation</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:instantiationLocation</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="part_relation">
+                <properties>
+                  <type>fieldset</type>
+                  <access>TRUE</access>
+                  <required>FALSE</required>
+                  <title>Reel Relationships</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>instantiationRelation</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:instantiationRelation</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children>
+                  <element name="relation_type">
+                    <properties>
+                      <type>select</type>
+                      <access>TRUE</access>
+                      <options>
+                        <not_applicable>None</not_applicable>
+                        <index key="Precedes in sequence.">Precedes in sequence</index>
+                        <index key="Follows in sequence.">Follows in sequence</index>
+                      </options>
+                      <required>FALSE</required>
+                      <title>Relationship Type</title>
+                      <tree>TRUE</tree>
+                      <actions>
+                        <create>
+                          <path>self::node()</path>
+                          <context>parent</context>
+                          <schema/>
+                          <type>element</type>
+                          <prefix>NULL</prefix>
+                          <value>instantiationRelationType</value>
+                        </create>
+                        <read>
+                          <path>self::node()/pb:instantiationRelationType</path>
+                          <context>parent</context>
+                        </read>
+                        <update>
+                          <path>self::node()</path>
+                          <context>self</context>
+                        </update>
+                        <delete>
+                          <path>self::node()</path>
+                          <context>self</context>
+                        </delete>
+                      </actions>
+                    </properties>
+                    <children/>
+                  </element>
+                  <element name="relation_id">
+                    <properties>
+                      <type>textfield</type>
+                      <access>TRUE</access>
+                      <description>Fill with related entity's full accession number, including r# suffix.</description>
+                      <required>FALSE</required>
+                      <title>Related Entity</title>
+                      <tree>TRUE</tree>
+                      <actions>
+                        <create>
+                          <path>self::node()</path>
+                          <context>parent</context>
+                          <schema/>
+                          <type>element</type>
+                          <prefix>NULL</prefix>
+                          <value>instantiationRelationIdentifier</value>
+                        </create>
+                        <read>
+                          <path>self::node()/pb:instantiationRelationIdentifier</path>
+                          <context>parent</context>
+                        </read>
+                        <update>
+                          <path>self::node()</path>
+                          <context>self</context>
+                        </update>
+                        <delete>
+                          <path>self::node()</path>
+                          <context>self</context>
+                        </delete>
+                      </actions>
+                    </properties>
+                    <children/>
+                  </element>
+                </children>
+              </element>
+            </children>
+          </element>
+        </children>
+      </element>
+      <element name="relations">
+        <properties>
+          <type>tabs</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Instantiation Relationships</title>
+          <tree>TRUE</tree>
+        </properties>
+        <children>
+          <element name="0">
+            <properties>
+              <type>tabpanel</type>
+              <access>TRUE</access>
+              <required>FALSE</required>
+              <tree>TRUE</tree>
+              <actions>
+                <create>
+                  <path>self::node()</path>
+                  <context>parent</context>
+                  <schema/>
+                  <type>element</type>
+                  <prefix>NULL</prefix>
+                  <value>instantiationRelation</value>
+                </create>
+                <read>
+                  <path>self::node()/pb:instantiationRelation</path>
+                  <context>parent</context>
+                </read>
+                <update>
+                  <path>self::node()</path>
+                  <context>self</context>
+                </update>
+                <delete>
+                  <path>self::node()</path>
+                  <context>self</context>
+                </delete>
+              </actions>
+            </properties>
+            <children>
+              <element name="relationship">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <not_applicable>None</not_applicable>
+                    <isDerivativeOf>Derivative Of</isDerivativeOf>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Relationship</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>instantiationRelationType</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:instantiationRelationType</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="rel_ent">
+                <properties>
+                  <type>textfield</type>
+                  <access>TRUE</access>
+                  <description>Fill with related entity's FileMaker Key.</description>
+                  <required>FALSE</required>
+                  <title>Related Entity</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>instantiationRelationIdentifier</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:instantiationRelationIdentifier</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="rel_annotation">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <not_applicable>None</not_applicable>
+                    <index key="Excerpt of the full work.">Excerpt of the full work.</index>
+                    <index key="Highlights selected by a curator.">Highlights selected by a curator.</index>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Relationship Note</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()/pb:instantiationRelationType</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>attribute</type>
+                      <prefix>NULL</prefix>
+                      <value>annotation</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:instantiationRelationType/@annotation</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>NULL</delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+            </children>
+          </element>
+        </children>
+      </element>
+      <element name="instantiations_start_date">
+        <properties>
+          <type>datepicker</type>
+          <access>TRUE</access>
+          <attributes>
+            <style>inline</style>
+          </attributes>
+          <description>Use ISO 8601 (YYYY-MM-DD)</description>
+          <required>FALSE</required>
+          <title>Date Instantiation Created</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationDate dateType="instantiationStart"&gt;%value%&lt;/pb:instantiationDate&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationDate[@dateType="instantiationStart"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="standard">
+        <properties>
+          <type>select</type>
+          <access>TRUE</access>
+          <options>
+            <not_applicable>N/A</not_applicable>
+            <Film>Film</Film>
+            <NTSC>NTSC</NTSC>
+          </options>
+          <required>FALSE</required>
+          <title>Format Standard</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationStandard source="media_spec"&gt;%value%&lt;/pb:instantiationStandard&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationStandard</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="instantiation_tracks">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <description>Example: 1 image track, 0 sound tracks</description>
+          <required>FALSE</required>
+          <title>Instantiation Tracks</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>element</type>
+              <prefix>NULL</prefix>
+              <value>instantiationTracks</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationTracks</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="iets">
+        <properties>
+          <type>tabs</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Instantiation Essence Tracks</title>
+          <tree>TRUE</tree>
+        </properties>
+        <children>
+          <element name="0">
+            <properties>
+              <type>tabpanel</type>
+              <access>TRUE</access>
+              <required>FALSE</required>
+              <tree>TRUE</tree>
+              <actions>
+                <create>
+                  <path>self::node()</path>
+                  <context>parent</context>
+                  <schema/>
+                  <type>element</type>
+                  <prefix>NULL</prefix>
+                  <value>instantiationEssenceTrack</value>
+                </create>
+                <read>
+                  <path>self::node()/pb:instantiationEssenceTrack</path>
+                  <context>parent</context>
+                </read>
+                <update>NULL</update>
+                <delete>NULL</delete>
+              </actions>
+            </properties>
+            <children>
+              <element name="track_type">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <audio>Audio</audio>
+                    <video>Video</video>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Track Type</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>essenceTrackType</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:essenceTrackType</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="essence_track_aspect_ratio">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <not_applicable>N/A</not_applicable>
+                    <index key="1.37:1 (Academy)">1.37:1 (Academy)</index>
+                    <index key="2.35:1 (anamorphic)">2.35:1 (anamorphic)</index>
+                    <index key="4:3 (full frame)">4:3 (full frame)</index>
+                    <index key="1.85:1 (matted)">1.85:1 (matted)</index>
+                    <index key="1.15:1 (Movietone)">1.15:1 (Movietone)</index>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Physical Properties: Aspect Ratio</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>essenceTrackAspectRatio</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:essenceTrackAspectRatio</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>NULL</delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="essence_track_frame_rate">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <not_applicable>N/A</not_applicable>
+                    <index key="29.97">29.97</index>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Video Properties: Frame Rate</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>essenceTrackFrameRate</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:essenceTrackFrameRate</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>NULL</delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="scan_type">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <not_applicable>N/A</not_applicable>
+                    <progressive>Progressive</progressive>
+                    <interlaced>Interlaced</interlaced>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Video Properties: Scan Type</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()/pb:essenceTrackFrameRate</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>attribute</type>
+                      <prefix>NULL</prefix>
+                      <value>annotation</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:essenceTrackFrameRate/@annotation</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>NULL</delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="playback_speed">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <not_applicable>N/A</not_applicable>
+                    <index key="16 fps">16 fps</index>
+                    <index key="18 fps">18 fps</index>
+                    <index key="24 fps">24 fps</index>
+                    <index key="30 fps">30 fps</index>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Physical Properties: Projection Speed</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>essenceTrackPlaybackSpeed</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:essenceTrackPlaybackSpeed</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+              <element name="track_standard">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <not_applicable>N/A</not_applicable>
+                    <Film>Film</Film>
+                    <NTSC>NTSC</NTSC>
+                    <index key="Variable-density optical">Variable-density optical</index>
+                    <index key="Variable-area optical">Variable-area optical</index>
+                    <Magnetic>Magnetic</Magnetic>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Essence Track Format Standard</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>essenceTrackStandard</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:essenceTrackStandard</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+            </children>
+          </element>
+        </children>
+      </element>
+      <element name="instantiation_colors">
+        <properties>
+          <type>select</type>
+          <access>TRUE</access>
+          <options>
+            <not_applicable>N/A</not_applicable>
+            <index key="Black and white">Black and white</index>
+            <Color>Color</Color>
+            <index key="Tinted and toned">Tinted and toned</index>
+            <index key="Lenticular color">Lenticular color</index>
+          </options>
+          <required>FALSE</required>
+          <title>Physical Properties: Color</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>element</type>
+              <prefix>NULL</prefix>
+              <value>instantiationColors</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationColors</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="instantiation_physical_carrier">
+        <properties>
+          <type>select</type>
+          <access>TRUE</access>
+          <options>
+            <not_applicable>N/A</not_applicable>
+            <index key="Film: 16mm">Film: 16mm</index>
+            <index key="Film: 35mm">Film: 35mm</index>
+            <index key="Film: 8mm">Film: 8mm</index>
+            <index key="Film: Super 8mm">Film: Super 8mm</index>
+            <index key="Betacam SP">Betacam SP</index>
+            <DVD>DVD</DVD>
+          </options>
+          <required>FALSE</required>
+          <title>Physical Properties: Carrier</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>element</type>
+              <prefix>NULL</prefix>
+              <value>instantiationPhysical</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationPhysical</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="physical_properties">
+        <properties>
+          <type>select</type>
+          <access>TRUE</access>
+          <options>
+            <not_applicable>N/A</not_applicable>
+            <Acetate>Acetate</Acetate>
+            <Nitrate>Nitrate</Nitrate>
+            <Polyester>Polyester</Polyester>
+          </options>
+          <required>FALSE</required>
+          <title>Physical Properties: Film Base</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationAnnotation annotationType="filmbase"&gt;%value%&lt;/pb:instantiationAnnotation&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationAnnotation[@annotationType="filmbase"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="generations">
+        <properties>
+          <type>select</type>
+          <access>TRUE</access>
+          <options>
+            <not_applicable>N/A</not_applicable>
+            <index key="Answer print">Answer print</index>
+            <index key="Duplicate negative">Duplicate negative</index>
+            <Masterpositive>Masterpositive</Masterpositive>
+            <Negative>Negative</Negative>
+            <index key="Positive (local)">Positive (local)</index>
+            <index key="Release print">Release print</index>
+            <Interpositive>Interpositive</Interpositive>
+            <index key="Reversal: duplicate negative">Reversal: duplicate negative</index>
+            <index key="Reversal: positive">Reversal: positive</index>
+            <index key="Magnetic track">Magnetic track</index>
+            <index key="Negative track">Negative track</index>
+            <index key="Positive track">Positive track</index>
+          </options>
+          <required>FALSE</required>
+          <title>Physical Properties: Generation</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>element</type>
+              <prefix>NULL</prefix>
+              <value>instantiationGenerations</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationGenerations</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="time_annotation">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <description>For multi-reel films, leave blank. Round all values to the nearest foot.</description>
+          <required>FALSE</required>
+          <title>Length in Feet</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>attribute</type>
+              <prefix>NULL</prefix>
+              <value>timeAnnotation</value>
+            </create>
+            <read>
+              <path>self::node()/@timeAnnotation</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>NULL</delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="StartTime">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Video Start Time</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>attribute</type>
+              <prefix>NULL</prefix>
+              <value>startTime</value>
+            </create>
+            <read>
+              <path>self::node()/@startTime</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>NULL</delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="EndTime">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Video End Time</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>attribute</type>
+              <prefix>NULL</prefix>
+              <value>endTime</value>
+            </create>
+            <read>
+              <path>self::node()/@endTime</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>NULL</delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="frame_rate">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Video Properties: Transfer Frame Rate </title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationAnnotation annotationType="frameRate"&gt;%value%&lt;/pb:instantiationAnnotation&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationAnnotation[@annotationType="frameRate"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="instantiation_language">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Language</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>element</type>
+              <prefix>NULL</prefix>
+              <value>instantiationLanguage</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationLanguage</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="instantiation_alternative_modes">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Subtitles</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>element</type>
+              <prefix>NULL</prefix>
+              <value>instantiationAlternativeModes</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationAlternativeModes</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="technical_note">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Physical Properties: Technical Note</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationAnnotation annotationType="Technical Note"&gt;%value%&lt;/pb:instantiationAnnotation&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationAnnotation[@annotationType="Technical Note"]</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="right_summary">
+        <properties>
+          <type>textfield</type>
+          <access>TRUE</access>
+          <default_value>Copyright University of South Carolina. All rights reserved.</default_value>
+          <required>FALSE</required>
+          <title>Preservation Statement</title>
+          <tree>TRUE</tree>
+          <actions>
+            <create>
+              <path>self::node()</path>
+              <context>parent</context>
+              <schema/>
+              <type>xml</type>
+              <prefix>NULL</prefix>
+              <value>&lt;pb:instantiationRights&gt;
+  &lt;pb:rightsSummary source="preservedBy"&gt;%value%&lt;/pb:rightsSummary&gt;
+&lt;/pb:instantiationRights&gt;</value>
+            </create>
+            <read>
+              <path>self::node()/pb:instantiationRights[pb:rightsSummary/@source='preservedBy']/pb:rightsSummary</path>
+              <context>parent</context>
+            </read>
+            <update>
+              <path>self::node()</path>
+              <context>self</context>
+            </update>
+            <delete>
+              <path>self::node()</path>
+              <context>self</context>
+            </delete>
+          </actions>
+        </properties>
+        <children/>
+      </element>
+      <element name="rights">
+        <properties>
+          <type>tabs</type>
+          <access>TRUE</access>
+          <required>FALSE</required>
+          <title>Instantiation Access</title>
+          <tree>TRUE</tree>
+        </properties>
+        <children>
+          <element name="0">
+            <properties>
+              <type>tabpanel</type>
+              <access>TRUE</access>
+              <required>FALSE</required>
+              <tree>TRUE</tree>
+              <actions>
+                <create>
+                  <path>self::node()</path>
+                  <context>parent</context>
+                  <schema/>
+                  <type>element</type>
+                  <prefix>NULL</prefix>
+                  <value>instantiationRights</value>
+                </create>
+                <read>
+                  <path>self::node()/pb:instantiationRights[not(pb:rightsSummary/@source='preservedBy')]</path>
+                  <context>parent</context>
+                </read>
+                <update>
+                  <path>self::node()</path>
+                  <context>self</context>
+                </update>
+                <delete>
+                  <path>self::node()</path>
+                  <context>self</context>
+                </delete>
+              </actions>
+            </properties>
+            <children>
+              <element name="right_summary">
+                <properties>
+                  <type>select</type>
+                  <access>TRUE</access>
+                  <options>
+                    <not_applicable>N/A</not_applicable>
+                    <index key="Archival element. Not available for viewing.">Archival element.</index>
+                    <index key="Preservation copy. Not available for viewing.">Preservation copy.</index>
+                    <index key="Theatrical projection print. Available for off-site loan and on-site viewing.">Theatrical projection print.</index>
+                    <index key="Access copy. Available for on-site viewing.">Access copy.</index>
+                  </options>
+                  <required>FALSE</required>
+                  <title>Access Statement</title>
+                  <tree>TRUE</tree>
+                  <actions>
+                    <create>
+                      <path>self::node()</path>
+                      <context>parent</context>
+                      <schema/>
+                      <type>element</type>
+                      <prefix>NULL</prefix>
+                      <value>rightsSummary</value>
+                    </create>
+                    <read>
+                      <path>self::node()/pb:rightsSummary</path>
+                      <context>parent</context>
+                    </read>
+                    <update>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </update>
+                    <delete>
+                      <path>self::node()</path>
+                      <context>self</context>
+                    </delete>
+                  </actions>
+                </properties>
+                <children/>
+              </element>
+            </children>
+          </element>
+        </children>
+      </element>
+      <element name="submit">
+        <properties>
+          <type>submit</type>
+          <access>TRUE</access>
+          <executes_submit_callback>TRUE</executes_submit_callback>
+          <required>FALSE</required>
+          <title>Submit</title>
+          <tree>TRUE</tree>
+          <value>Submit</value>
+        </properties>
+        <children/>
+      </element>
+    </children>
+  </form>
+</definition>
+
