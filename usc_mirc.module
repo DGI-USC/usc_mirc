@@ -309,7 +309,6 @@ WHERE {
 }
 EOQ
 );
-  dsm($results);
   $options = array(
     NULL => '(Remove collection association)',
   );
