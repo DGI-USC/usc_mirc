@@ -344,10 +344,10 @@ abstract class BaseVideoDisplay {
     }
     return $results;
   }
-  protected static function _perform_itql_query($query, $limit = -1, $offset = 0) {
+  public static function _perform_itql_query($query, $limit = -1, $offset = 0) {
     return self::_perform_ri_query($query, 'itql', $limit, $offset);
   }
-  protected static function _perform_sparql_query($query, $limit = -1, $offset = 0) {
+  public static function _perform_sparql_query($query, $limit = -1, $offset = 0) {
     return self::_perform_ri_query($query, 'sparql', $limit, $offset);
   }
 
