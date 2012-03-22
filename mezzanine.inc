@@ -326,7 +326,7 @@ abstract class BaseVideoDisplay {
     $results = array();
     foreach ($doc->results->children() as $result) {
       $r = array();
-      foreach ($result->children() as $element) { //Breaks here 'Node no longer exists'
+      foreach ($result->children() as $element) {
         $val = NULL;
         
         $attrs = $element->attributes();
@@ -338,7 +338,7 @@ abstract class BaseVideoDisplay {
           $val = $element;
         }
         
-        $r[$element->getName()] = (string) $val;
+        $r[$element->getName()] = self::_pid_uri_to_bare_pid((string)$val);
       }
       $results[] = $r;
     }
@@ -352,7 +352,14 @@ abstract class BaseVideoDisplay {
   }
 
   protected static function _pid_uri_to_bare_pid($uri) {
-    return substr(strstr($uri, '/'), 1);
+    $chunk = 'info:fedora/';
+    $pos = strrpos($uri, $chunk);
+    if ($pos !== FALSE) { //Remove info:fedora/ chunk
+      return substr($uri, strlen($chunk));
+    }
+    else { //Doesn't start with info:fedora/ chunk...
+      return $uri;
+    }
   }
  
   protected function _getDerivatives($subject = NULL) {
@@ -377,7 +384,7 @@ EOQ
   protected function _renderDerivatives($derivatives) {
     $ds = array();
     foreach ($derivatives as $d) {
-      $pid = self::_pid_uri_to_bare_pid($d['subject']);
+      $pid = $d['subject'];
       $ds[] = l($d['label'], "fedora/repository/$pid");
     }
     return theme('item_list', $ds);
@@ -386,11 +393,11 @@ EOQ
   protected function _player(array $videos) {
     $mod_path = drupal_get_path('module', 'usc_mirc');
     drupal_add_js("$mod_path/lib/flowplayer/flowplayer-3.2.8.min.js", 'module');
-    $mod_path = url($mod_path);
+
     $player_class = 'test_flowplayer';
     drupal_add_js(<<<EOJS
 $(function() {
-  $('.$player_class').flowplayer("$mod_path/lib/flowplayer/flowplayer.commercial-3.2.8.swf", {
+  $('.$player_class').flowplayer("/$mod_path/lib/flowplayer/flowplayer.commercial-3.2.8.swf", {
 
     //Product key (for sc.edu)
     key: "#$60fe88f4c446bc34a1c",
@@ -415,7 +422,7 @@ $(function() {
 EOJS
 , 'inline');
 
-    
+    $i = 0;
     $output =  array(
       '#type' => 'fieldset',
       '#title' => t('Player'),
@@ -429,9 +436,16 @@ EOJS
       $output['player'] = array(
         '#type' => 'markup',
         '#attributes' => array(
-          'class' => $player_class
+          //'class' => $player_class,
         ),
-        '#value' => "<a class='$player_class' href='{$videos[0]}' style='display: block; width: 480px; height: 360px'><img src='$mod_path/images/playbuttonblack.jpg' alt='Video placeholder' width='480' height='360'></img></a>",
+        //'#prefix' => "<a class='$player_class' href='{$videos[0]}' style='display: block; width: 480px; height: 360px'>",
+        //'#suffix' => '</a>',
+        '#value' => l(theme('image', "$mod_path/images/playbuttonblack.jpg", 'Video placeholder'), $videos[0], array(
+          'html' => TRUE,
+          'class' => $player_class,
+          'style' => 'display: block; width: 480px; height: 360px', //XXX:  Should probably be done via a style sheet...
+        )), 
+        '#weight' => $i++,
       );
       
       $output['carousel'] = array(
@@ -439,12 +453,14 @@ EOJS
         '#prefix' => '<!--',
         '#suffix' => '-->',
         '#value' => "<p>Make the carousel/thumbnail scrubber dealio.</p>",
+        '#weight' => $i++,
       );
     }
     else {
       $output['no_player'] = array(
-        '#type' => 'item',
-        '#value' => 'No video!'
+        '#type' => 'markup',
+        '#value' => theme('image', "$mod_path/images/NoVideoAvailable.jpg"),
+        '#weight' => $i++,
       );
     }
     
@@ -647,7 +663,7 @@ WHERE {
 }
 EOQ
 )) > 0) {
-      $pid = self::_pid_uri_to_bare_pid($results[0]['object']);
+      $pid = $results[0]['object'];
       
       $item = new Fedora_Item($this->pid);
       
@@ -671,7 +687,7 @@ EOQ
     $videos = array();
     //Need to get a list of the child access videos and create array of paths
     foreach ($this->_getDerivatives() as $d) {
-      $pid = self::_pid_uri_to_bare_pid($d['subject']);
+      $pid = $d['subject'];
       
       $videos[] = url("fedora/repository/$pid/VIDEO", array(
         'absolute' => TRUE

@@ -187,11 +187,73 @@ function _usc_mirc_get_unrendered_form($form_id) {
 
 function usc_mirc_form_fedora_repository_ingest_form_alter(&$form, &$form_state) {
   //dd($form_state['storage'], 'fdsa');
-  if (in_array($form_state['storage']['content_model'], array(/*'usc:test-vro',*/ 'usc:test-mezzanine', 'usc:test-access'))) {
-    //dd($form, 'asdf');
-    $form_state['storage']['pid_namespace'] = 'usc-test';
-    $form_state['storage']['parent_relation'] = 'isDerivativeOf';
+  if ($form_state['storage']['step'] === 1) {
+    if (in_array($form_state['storage']['content_model'], array(/*'usc:test-vro',*/ 'usc:test-mezzanine', 'usc:test-access'))) {
+      //dd($form, 'asdf');
+      $form_state['storage']['pid_namespace'] = 'usc-test';
+      $form_state['storage']['parent_relation'] = 'isDerivativeOf';
+    }
+    
+    if ($form_state['storage']['content_model'] === 'usc:test-mezzanine') {
+      //TODO: Get a list of instantiations in the parent PBCore
+    }
   }
+  elseif ($form_state['storage']['step'] === 2) {
+    if ($form_state['storage']['content_model'] === 'usc:test-mezzanine') {
+      //TODO: Add the of the selected instantiation xml to state/storage/xml_data
+    }
+  }
+}
+
+/**
+ *  Get the relevant info...
+ */
+function _usc_mirc_get_instantiation_array() {
+  $toReturn = array(
+    'none' => t('')
+  );
+  
+  //1. get the parent PBCore
+  //1.1 identify the parent(s)
+  module_load_include('inc', 'usc_mirc', 'mezzanine');
+  $parents = BaseVideoDisplay::_perform_sparql_query(<<<EOQ
+PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+PREFIX fm: <info:fedora/fedora-system:def/model#>
+PREFIX fv: <info:fedora/fedora-system:def/view#>
+SELECT ?parent
+FROM <#ri>
+WHERE {
+  ?this fre:isDerivativeOf ?parent .
+  ?parent fm:state fm:Active ;
+          fv:disseminates ?DSs .
+  ?DSs fv:disseminationType <info:fedora/*/PBCORE> ;
+       fm:state fm:Active .  
+}
+EOQ
+);
+  $num_parents = count($parents);
+  $parent = NULL;
+  
+  if ($num_parents > 1) {
+    $uri = $parents[0]['parent'];
+    $parent = substr($uri, strrpos($uri, '/'));
+    watchdog('usc_mirc', 'More than one parent!? Using first (%parent_pid)', array('%parent_pid' => $parent), WATCHDOG_WARNING);
+  }
+  elseif ($num_parents === 1) {
+    $uri = $parents[0]['parent'];
+    $parent = substr($uri, strrpos($uri, '/'));
+  }
+  $pbcore = DOMDocument::load(url("fedora/repository/$parent/PBCORE"));
+  if ($pbcore !== FALSE) {  
+    $pbcore = new DOMXPath($pbcore);
+    //add each instantiation to the array to return.
+    $pbcore->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+    foreach ($pbcore->query('//pb:pbcoreInstantiation') as $node) {
+      $toReturn[] = 'asdf';
+    }
+  }
+  
+  return $toReturn;
 }
 
 function usc_mirc_menu() {
@@ -227,6 +289,36 @@ function usc_mirc_redirect_form(&$form_state, $parent_pid) {
   );
 }
 
+function _usc_mirc_get_sub_collections($collection = NULL) {
+  if (empty($collection)) { //XXX:  Make into configuration?
+    $collection = 'usc:mirc';
+  }
+  
+  //Get direct children of the collection (with their titles)
+  module_load_include('inc', 'usc_mirc', 'mezzanine');
+  $results = BaseVideoDisplay::_perform_sparql_query(<<<EOQ
+PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+PREFIX fm: <info:fedora/fedora-system:def/model#>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+SELECT ?subcollection ?title
+FROM <#ri>
+WHERE {
+  ?subcollection fre:isMemberOfCollection <info:fedora/$collection> ;
+                 fm:state fm:Active ;
+                 dc:title ?title .
+}
+EOQ
+);
+  dsm($results);
+  $options = array(
+    NULL => '(Remove collection association)',
+  );
+  foreach($results as $result) {
+    $options[$result['subcollection']] = $result['title'];
+  }
+  return $options;
+}
+
 function usc_mirc_switch_mezzanine_collection(&$form_state, $object_pid) {
   return array(
     'object_pid' => array(
@@ -237,12 +329,7 @@ function usc_mirc_switch_mezzanine_collection(&$form_state, $object_pid) {
       '#type' => 'select',
       '#title' => t('New collection'),
       '#description' => t('The collection to which this object should be moved.'),
-      '#options' => array( //Need to get this list programmatically.
-        'usc:movietone' => 'Fox Movietone News collection 1919-1934, 1942-1944',
-        'usc:gibbes' => 'Heyward Gibbes collection, 1926-1945',
-        'usc:wis' => 'Local Television News: WIS',
-        'usc:vishniac' => 'Roman Vishniac film collection, 1958-1990',
-      ),
+      '#options' => _usc_mirc_get_sub_collections('usc:mirc'),
     ),
     'submit' => array(
       '#type' => 'submit',
@@ -258,7 +345,10 @@ function usc_mirc_switch_mezzanine_collection_submit($form, &$form_state) {
   
   $item = new Fedora_Item($values['object_pid']);
   $item->purge_relationship('fedora:isMemberOfCollection', '');
-  $item->add_relationship('isMemberOfCollection', $values['collection']);
+  
+  if (!empty($values['collection'])) {
+    $item->add_relationship('isMemberOfCollection', $values['collection']);
+  }
 }
 
 function usc_mirc_redirect_form_submit($form, &$form_state) {
