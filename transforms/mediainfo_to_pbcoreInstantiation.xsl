@@ -1,6 +1,6 @@
 <xsl:stylesheet version="1.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-    xmlns:pb="http://www.pbcore.org/PBCore/PBCoreNamespace.html"
+    xmlns="http://www.pbcore.org/PBCore/PBCoreNamespace.html"
     exclude-result-prefixes="">
   <xsl:output method="xml" indent="yes" encoding="UTF-8"/>
   <xsl:param name="instanceDoc">TRUE</xsl:param>
@@ -8,14 +8,14 @@
   <xsl:template match="File[1]">
     <xsl:choose>
       <xsl:when test="$instanceDoc='TRUE'">
-        <pb:pbcoreInstantiationDocument>
+        <pbcoreInstantiationDocument>
           <xsl:apply-templates/>
-        </pb:pbcoreInstantiationDocument>
+        </pbcoreInstantiationDocument>
       </xsl:when>
       <xsl:otherwise>
-        <pb:pbcoreInstantiation>
+        <pbcoreInstantiation>
           <xsl:apply-templates/>
-        </pb:pbcoreInstantiation>
+        </pbcoreInstantiation>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
@@ -26,104 +26,104 @@
         <xsl:apply-templates mode="general"/>
       </xsl:when>
       <xsl:otherwise>
-        <pb:instantiationEssenceTrack>
-          <pb:essenceTrackType>
+        <instantiationEssenceTrack>
+          <essenceTrackType>
             <xsl:value-of select="@type"/>
-          </pb:essenceTrackType>
+          </essenceTrackType>
           <xsl:apply-templates mode="essence"/>
-        </pb:instantiationEssenceTrack>
+        </instantiationEssenceTrack>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
   
   <xsl:template match="Complete_name[1]" mode="general">
-    <pb:instantiationIdentifier source="filename">
+    <instantiationIdentifier source="filename">
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:instantiationIdentifier>
+    </instantiationIdentifier>
   </xsl:template>
   
   <xsl:template match="File_last_modification_date[1]" mode="general">
-    <pb:instantiationDate dateType="modified">
+    <instantiationDate dateType="modified">
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:instantiationDate>
+    </instantiationDate>
   </xsl:template>
   
   <xsl:template match="Internet_media_type[1]" mode="general">
-    <pb:instantiationDigital>
+    <instantiationDigital>
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:instantiationDigital>
+    </instantiationDigital>
   </xsl:template>
   
   <xsl:template match="Format[1]" mode="general">
-    <pb:instantiationStandard source="container">
+    <instantiationStandard source="container">
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:instantiationStandard>
+    </instantiationStandard>
   </xsl:template>
   
   <xsl:template match="File_size[1]" mode="general">
-    <pb:instantiationFileSize unitsOfMeasure="bytes">
+    <instantiationFileSize unitsOfMeasure="bytes">
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:instantiationFileSize>
+    </instantiationFileSize>
   </xsl:template>
   
   <xsl:template match="Duration[last()]" mode="general">
-    <pb:instantiationDuration>
+    <instantiationDuration>
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:instantiationDuration>
+    </instantiationDuration>
   </xsl:template>
   
   <xsl:template match="Overall_bit_rate[1]" mode="general">
-    <pb:instantiationDataRate>
+    <instantiationDataRate>
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:instantiationDataRate>
+    </instantiationDataRate>
   </xsl:template>
   
   <xsl:template match="Codec_CC" mode="essence">
-    <pb:essenceTrackStandard>
+    <essenceTrackStandard>
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:essenceTrackStandard>
+    </essenceTrackStandard>
   </xsl:template>
   
   <xsl:template match="Codec_Info" mode="essence">
-    <pb:essenceTrackEncoding>
+    <essenceTrackEncoding>
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:essenceTrackEncoding>
+    </essenceTrackEncoding>
   </xsl:template>
   
   <xsl:template match="Bit_rate[1]" mode="essence">
-    <pb:essenceTrackDataRate unitsOfMeasure="bits per second">
+    <essenceTrackDataRate unitsOfMeasure="bits per second">
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:essenceTrackDataRate>
+    </essenceTrackDataRate>
   </xsl:template>
   
   <xsl:template match="Frame_rate[1]" mode="essence">
-    <pb:essenceTrackFrameRate unitsOfMeasure="frames per second">
+    <essenceTrackFrameRate unitsOfMeasure="frames per second">
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:essenceTrackFrameRate>
+    </essenceTrackFrameRate>
   </xsl:template>
   
   <xsl:template match="Display_aspect_ratio[1]" mode="essence">
-    <pb:essenceTrackAspectRatio>
+    <essenceTrackAspectRatio>
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:essenceTrackAspectRatio>
+    </essenceTrackAspectRatio>
   </xsl:template>
   
   <xsl:template match="Duration[last()]" mode="essence">
-    <pb:essenceTrackDuration>
+    <essenceTrackDuration>
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:essenceTrackDuration>
+    </essenceTrackDuration>
   </xsl:template>
   
   <xsl:template match="Bit_depth[1]" mode="essence">
-    <pb:essenceTrackBitDepth>
+    <essenceTrackBitDepth>
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:essenceTrackBitDepth>
+    </essenceTrackBitDepth>
   </xsl:template>
   
   <xsl:template match="Stream_size[1]" mode="essence">
-    <pb:essenceTrackAnnotation annotationType="stream_size_in_bytes">
+    <essenceTrackAnnotation annotationType="stream_size_in_bytes">
       <xsl:value-of select="normalize-space(text())"/>
-    </pb:essenceTrackAnnotation>
+    </essenceTrackAnnotation>
   </xsl:template>
   
   <xsl:template match="text()" mode="essence"/>
