@@ -2,10 +2,12 @@
 
 abstract class BaseVideoDisplay {
   protected $pid;
+  protected $def_rel;
   
   public function __construct($pid) {
     module_load_include('inc', 'fedora_repository', 'api/fedora_item');
     $this->pid = $pid;
+    $this->def_rel = variable_get('usc_mirc_relationship', 'isDerivativeOf');
   }
   
   protected function _addDerivativeTab($content_models = array()) {
@@ -364,7 +366,7 @@ abstract class BaseVideoDisplay {
  
   protected function _getDerivatives($subject = NULL) {
     if ($subject === NULL) {
-      $subject = "?subject fre:isDerivativeOf <info:fedora/{$this->pid}>";
+      $subject = "?subject fre:{$this->def_rel} <info:fedora/{$this->pid}>";
     }
     //perform query
     $results = self::_perform_sparql_query(<<<EOQ
@@ -614,9 +616,9 @@ class IslandoraVRO extends BaseVideoDisplay {
     if (user_access('view detailed list of content')) {
       //This seems like a stupid way to do this, but I want to get the list of access copies...  Blargh.
       $derivatives = $this->_getDerivatives(<<<EOQ
-?sub fre:isDerivativeOf <info:fedora/{$this->pid}> ;
+?sub fre:{$this->def_rel} <info:fedora/{$this->pid}> ;
      fm:state fm:Active .
-?subject fre:isDerivativeOf ?sub
+?subject fre:$def_rel ?sub
 EOQ
 );
       if (count($derivatives) > 0) {
@@ -656,7 +658,7 @@ PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
 PREFIX fm: <info:fedora/fedora-system:def/model#>
 SELECT ?object
 WHERE {
-  ?subject fre:isDerivativeOf ?object ;
+  ?subject fre:{$this->def_rel} ?object ;
            fm:state fm:Active .
   ?object fm:state fm:Active .
   FILTER(sameTerm(?subject, <info:fedora/{$this->pid}>)) .

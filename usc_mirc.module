@@ -186,20 +186,21 @@ function _usc_mirc_get_unrendered_form($form_id) {
 }
 
 function usc_mirc_form_fedora_repository_ingest_form_alter(&$form, &$form_state) {
-  //dd($form_state['storage'], 'fdsa');
   if ($form_state['storage']['step'] === 1) {
-    if (in_array($form_state['storage']['content_model'], array(/*'usc:test-vro',*/ 'usc:test-mezzanine', 'usc:test-access'))) {
-      //dd($form, 'asdf');
-      $form_state['storage']['pid_namespace'] = 'usc-test';
-      $form_state['storage']['parent_relation'] = 'isDerivativeOf';
+    if (in_array($form_state['storage']['content_model'], array(
+      variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
+      variable_get('usc_mirc_cmodel_access', 'usc:test-access'),
+    ))) {
+      $form_state['storage']['pid_namespace'] = variable_get('usc_mirc_namespace', 'usc');
+      $form_state['storage']['parent_relation'] = variable_get('usc_mirc_relationship', 'isDerivativeOf');
     }
     
-    if ($form_state['storage']['content_model'] === 'usc:test-mezzanine') {
+    if ($form_state['storage']['content_model'] === variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine')) {
       //TODO: Get a list of instantiations in the parent PBCore
     }
   }
   elseif ($form_state['storage']['step'] === 2) {
-    if ($form_state['storage']['content_model'] === 'usc:test-mezzanine') {
+    if ($form_state['storage']['content_model'] === variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine')) {
       //TODO: Add the of the selected instantiation xml to state/storage/xml_data
     }
   }
@@ -261,8 +262,92 @@ function usc_mirc_menu() {
     'usc/streaming_autocomplete' => array(
       'page callback' => 'usc_mirc_autocomplete_streaming_url',
       'access arguments' => array('access content'),
-    )
+      'type' => MENU_CALLBACK,
+    ),
+    'admin/settings/fedora_repository/usc_mirc' => array(
+      'title' => t('MIRC Islandora configuration'),
+      'description' => t('A number of configuration parameters used in the display of MIRC\'s video collections'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('usc_mirc_admin_form'),
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_LOCAL_TASK,
+    ),
   );
+}
+
+function usc_mirc_admin_form(&$form_state) {
+  $i = -100;
+  return system_settings_form(array(
+    'usc_mirc_mezzanine_collection' => array(
+      '#type' => 'textfield',
+      '#weight' => $i++,
+      '#title' => t('Top mezzanine collection'),
+      '#description' => t('May the same as the top collection of the Islandora config.  Used to populate the list of collections to which a mezzanine may be migrated'),
+      '#default_value' => variable_get('usc_mirc_mezzanine_collection', variable_get('fedora_repository_pid', 'usc:mirc')),
+    ),
+    'usc_mirc_namespace' => array(
+      '#type' => 'textfield',
+      '#weight' => $i++,
+      '#title' => t('MIRC PID namespace'),
+      '#description' => t('The namespace/prefix with which new items will be created in Fedora (where a COLLECTION_POLICY doesn\'t already dictate it).'),
+      '#default_value' => variable_get('usc_mirc_namespace', 'usc'),
+    ),
+    'usc_mirc_relationship' => array(
+      '#type' => 'textfield',
+      '#weight' => $i++,
+      '#title' => t('Relationship'),
+      '#description' => t('RELS-EXT relationship used to relate mezzanines to VROs and access copies to mezzanines.  Probably a bad idea to change this after objects have already been created, as existing objects will not be changed.'),
+      '#default_value' => variable_get('usc_mirc_relationship', 'isDerivativeOf'),
+    ),
+    'usc_mirc_streaming_url' => array(
+      '#type' => 'textfield',
+      '#weight' => $i++,
+      '#title' => t('Streaming base URL'),
+      '#description' => t('URL (possibly with port and path), without a terminiating slash. (Used during access copy autocompletion)'),
+      '#default_value' => variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu'),
+    ),
+    'usc_mirc_streaming_folder' => array(
+      '#type' => 'textfield',
+      '#weight' => $i++,
+      '#title' => t('Streaming folder'),
+      '#description' => t('Mountpoint/folder on server under which the streaming access copies are located. (Used during access copy autocompletion)'),
+      '#default_value' => variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access'),
+    ),
+    'usc_mirc_streaming_extensions' => array(
+      '#type' => 'textfield',
+      '#weight' => $i++,
+      '#title' => t('File extensions'),
+      '#description' => t('Space-separated list of h264 file extensions to autocomplete'),
+      '#default_value' => variable_get('usc_mirc_streaming_extensions', '.m4v .mp4 .flv .mov'),
+    ),
+    'cmodels' => array(
+      '#type' => 'fieldset',
+      '#weight' => $i++,
+      '#title' => t('Content Models'),
+      '#description' => t('Content Models used for different purposes.  Probably a bad idea to change any after objects have been created with them (existing objects may be orphaned).  Fields may be hidden?'),
+      'usc_mirc_cmodel_vro' => array(
+        '#type' => 'textfield',
+        '#weight' => $i++,
+        '#title' => t('VRO Content Model'),
+        '#description' => t('Content Model used for Video Resource Objects.'),
+        '#default_value' => variable_get('usc_mirc_cmodel_vro', 'usc:test-vro'),
+      ),
+      'usc_mirc_cmodel_mezzanine' => array(
+        '#type' => 'textfield',
+        '#weight' => $i++,
+        '#title' => t('Mezzanine Content Model'),
+        '#description' => t('Content Model used for mezzanine objects.'),
+        '#default_value' => variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
+      ),
+      'usc_mirc_cmodel_access' => array(
+        '#type' => 'textfield',
+        '#weight' => $i++,
+        '#title' => t('Access Content Model'),
+        '#description' => t('Content Model used for access copy objects.'),
+        '#default_value' => variable_get('usc_mirc_cmodel_access', 'usc:test-access'),
+      ),
+    )
+  ));
 }
 
 function usc_mirc_redirect_form(&$form_state, $parent_pid) {
@@ -291,7 +376,7 @@ function usc_mirc_redirect_form(&$form_state, $parent_pid) {
 
 function _usc_mirc_get_sub_collections($collection = NULL) {
   if (empty($collection)) { //XXX:  Make into configuration?
-    $collection = 'usc:mirc';
+    $collection = variable_get('usc_mirc_mezzanine_collection', variable_get('fedora_repository_pid', 'usc:mirc'));
   }
   
   //Get direct children of the collection (with their titles)
@@ -328,7 +413,7 @@ function usc_mirc_switch_mezzanine_collection(&$form_state, $object_pid) {
       '#type' => 'select',
       '#title' => t('New collection'),
       '#description' => t('The collection to which this object should be moved.'),
-      '#options' => _usc_mirc_get_sub_collections('usc:mirc'),
+      '#options' => _usc_mirc_get_sub_collections(),
     ),
     'submit' => array(
       '#type' => 'submit',
@@ -355,41 +440,69 @@ function usc_mirc_redirect_form_submit($form, &$form_state) {
   
   $values = $form_state['values'];
   
-  $pid_namespace = 'usc-test'; //XXX:  This should probably be pulled in from a constant...
+  $pid_namespace = variable_get('usc_mirc_namespace', 'usc');
   $pid = Fedora_Item::get_next_PID_in_namespace($pid_namespace);
   
   global $user;
   $new_item = Fedora_Item::ingest_new_item($pid, 'A', $values['title'], $user->name);
   
   $new_item->add_datastream_from_url($values['streaming_url'], 'VIDEO', 'Video Redirect', 'video/mp4', 'R', 'Added from Islandora');
-  $new_item->add_relationship('isDerivativeOf', $values['parent_pid']);
+  $new_item->add_relationship(variable_get('usc_mirc_relationship', 'isDerivativeOf'), $values['parent_pid']);
+  $new_item->add_relationship('fedora-model:hasModel', variable_get('usc_mirc_cmodel_access', 'usc:test-access'));
 }
 
-function usc_mirc_autocomplete_streaming_url($string) {
-  //Get the contents of whatever directory
+function _usc_mirc_is_video_filename($filename) {
+  static $exts = NULL;
+  if (empty($exts)) {
+    explode(
+      ' ', 
+      variable_get(
+        'usc_mirc_streaming_extensions',
+        '.m4v .mp4 .flv .mov'
+      )
+    );
+  }
   
-  $sb = 'http://dvr-streaming.mirc.sc.edu';
-  $fsb = '/mnt/mirc/mezz/access';
-  $dir = dir($fsb);
+  return in_array(substr($filename, -4), $exts);
+}
+
+/**
+ *  Get an array of all the files in this directory (including subdirectories if $recurse is TRUE).
+ */
+function _usc_mirc_traverse_directory($sub_dir = '.', $recurse = TRUE) {
+  //TODO: Make configuration
+  static $sb = NULL;
+  static $fsb = NULL;
+  
+  if (empty($sb) || empty($fsb)) {
+    $sb = variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu');
+    $fsb = variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access');
+  }
+  
   $videos = array();
+  
+  $dir = dir("$fsb/$sub_dir");
   while ($entry = $dir->read()) {
-    if ((strpos($entry, $string) === 0 || $string === '*') &&
-      in_array(substr($entry, -4), array('.m4v', '.mp4', '.flv', '.mov'))) {
-      
-      $videos["$sb/$entry"] = $entry;
+    $this_entry = "$sub_dir/$entry";
+    if ($recurse && is_dir("$fsb/$this_entry")) {
+      $videos = array_merge($videos, _usc_mirc_traverse_directory($this_entry, $recurse));
+    }
+    elseif ($string === '*' || strpos($entry, $string) === 0) {
+      $videos["$sb/$this_entry"] = $entry;
     }
   }
   $dir->close();
   
-  //Return JSON object of 
-  //{
-  //  url_1: url_1,
-  //  url_2: url_2,
-  //  ...
-  //}
+  return $videos;
+}
+
+function usc_mirc_autocomplete_streaming_url($string) {
+  $videos = _usc_mirc_traverse_directory();
+  $videos = array_filter($videos, '_usc_mirc_is_video_filename');
+  
   ksort($videos);
   drupal_json($videos);
-  //exit();
+
   return;
 }
 
