@@ -42,7 +42,7 @@ abstract class BaseVideoDisplay {
       );
     }
     else {
-      $pbcore = new DOMXPath($pbcore);
+      /*$pbcore = new DOMXPath($pbcore);
       // Register the php: namespace (required)
       $pbcore->registerNamespace('php', 'http://php.net/xpath');
 
@@ -53,7 +53,7 @@ abstract class BaseVideoDisplay {
       ));
       
       //Parameters with which to process the DOM Document/XPath...
-      $i = 0;
+      //$i = 0;
       $functional_mapping = array(
         array(
           '#title' => t('Title'),
@@ -247,26 +247,9 @@ abstract class BaseVideoDisplay {
           ),
           '#weight' => $i++,
         ),
-        /*array( //Seems like this could go a little differently...  As in, get the name of the related titles, instead of the PID/ID which should be here
-          '#title' => t('Related Titles'),
-          '#user_data' => array(
-            'pbcore' => $pbcore,
-            'xpath' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRelation[not(@relationType="isMemberOfCollection")]'
-          ),
-          '#weight' => $i++,
-        ),*/
-        /*array(
-          '#title' => t('Instantiation info'),
-          '#type' => 'item',
-          '#value' => '(Not quite sure how to show it...)',
-          '#user_data' => array(
-            'pbcore' => $pbcore,
-            'xpath' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRelation[@relationType="isMemberOfCollection"]' 
-          ),
-          '#weight' => $i++,
-        ),*/
-      );
+      );*/
       
+      $functional_mapping = _usc_mirc_get_unrendered_form('Mezzanine Display', $pbcore->saveXML());
       return $functional_mapping;
     }
   }
