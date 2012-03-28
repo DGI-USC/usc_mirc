@@ -292,13 +292,6 @@ function usc_mirc_admin_form(&$form_state) {
       '#description' => t('The namespace/prefix with which new items will be created in Fedora (where a COLLECTION_POLICY doesn\'t already dictate it).'),
       '#default_value' => variable_get('usc_mirc_namespace', 'usc'),
     ),
-    'usc_mirc_relationship' => array(
-      '#type' => 'textfield',
-      '#weight' => $i++,
-      '#title' => t('Relationship'),
-      '#description' => t('RELS-EXT relationship used to relate mezzanines to VROs and access copies to mezzanines.  Probably a bad idea to change this after objects have already been created, as existing objects will not be changed.'),
-      '#default_value' => variable_get('usc_mirc_relationship', 'isDerivativeOf'),
-    ),
     'usc_mirc_streaming_url' => array(
       '#type' => 'textfield',
       '#weight' => $i++,
@@ -320,33 +313,48 @@ function usc_mirc_admin_form(&$form_state) {
       '#description' => t('Space-separated list of h264 file extensions to autocomplete'),
       '#default_value' => variable_get('usc_mirc_streaming_extensions', '.m4v .mp4 .flv .mov'),
     ),
-    'cmodels' => array(
+    'breakables' => array(
       '#type' => 'fieldset',
+      '#title' => t('Breakables (CAUTION!)'),
+      '#description' => t('Settings which probably should not be touched after the initial installation.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
       '#weight' => $i++,
-      '#title' => t('Content Models'),
-      '#description' => t('Content Models used for different purposes.  Probably a bad idea to change any after objects have been created with them (existing objects may be orphaned).  Fields may be hidden?'),
-      'usc_mirc_cmodel_vro' => array(
+      'usc_mirc_relationship' => array(
         '#type' => 'textfield',
         '#weight' => $i++,
-        '#title' => t('VRO Content Model'),
-        '#description' => t('Content Model used for Video Resource Objects.'),
-        '#default_value' => variable_get('usc_mirc_cmodel_vro', 'usc:test-vro'),
+        '#title' => t('Relationship'),
+        '#description' => t('RELS-EXT relationship used to relate mezzanines to VROs and access copies to mezzanines.  Probably a bad idea to change this after objects have already been created, as existing objects will not be changed.'),
+        '#default_value' => variable_get('usc_mirc_relationship', 'isDerivativeOf'),
       ),
-      'usc_mirc_cmodel_mezzanine' => array(
-        '#type' => 'textfield',
+      'cmodels' => array(
+        '#type' => 'fieldset',
         '#weight' => $i++,
-        '#title' => t('Mezzanine Content Model'),
-        '#description' => t('Content Model used for mezzanine objects.'),
-        '#default_value' => variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
+        '#title' => t('Content Models'),
+        '#description' => t('Content Models used for different purposes.  Probably a bad idea to change any after objects have been created with them (existing objects may be orphaned).  Fields may be hidden?'),
+        'usc_mirc_cmodel_vro' => array(
+          '#type' => 'textfield',
+          '#weight' => $i++,
+          '#title' => t('VRO Content Model'),
+          '#description' => t('Content Model used for Video Resource Objects.'),
+          '#default_value' => variable_get('usc_mirc_cmodel_vro', 'usc:test-vro'),
+        ),
+        'usc_mirc_cmodel_mezzanine' => array(
+          '#type' => 'textfield',
+          '#weight' => $i++,
+          '#title' => t('Mezzanine Content Model'),
+          '#description' => t('Content Model used for mezzanine objects.'),
+          '#default_value' => variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
+        ),
+        'usc_mirc_cmodel_access' => array(
+          '#type' => 'textfield',
+          '#weight' => $i++,
+          '#title' => t('Access Content Model'),
+          '#description' => t('Content Model used for access copy objects.'),
+          '#default_value' => variable_get('usc_mirc_cmodel_access', 'usc:test-access'),
+        ),
       ),
-      'usc_mirc_cmodel_access' => array(
-        '#type' => 'textfield',
-        '#weight' => $i++,
-        '#title' => t('Access Content Model'),
-        '#description' => t('Content Model used for access copy objects.'),
-        '#default_value' => variable_get('usc_mirc_cmodel_access', 'usc:test-access'),
-      ),
-    )
+    ),
   ));
 }
 
@@ -516,5 +524,101 @@ function usc_mirc_islandora_solr_primary_display() {
       'function' => 'displayResults',
       'description' => t('More specific output.'),
     ),
+  );
+}
+
+function usc_mirc_required_fedora_objects() {
+  $mod_path = drupal_get_path('module', 'usc_mirc') . '/fedora_objects';
+  return array(
+    'usc_mirc' => array(
+      'module' => 'usc_mirc',
+      'title' => t('USC Video Content Models'),
+      'objects' => array(
+        array(
+          'pid' => 'usc:mezzanineRootCollectionCModel',
+          'label' => 'Moving Images Research Collections',
+          'cmodel' => 'info:fedora/islandora:collectionCModel',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/vro/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+        array(
+          'pid' => 'usc:mezzanineCollectionCModel',
+          'label' => 'Mezzanine Collection Content Model',
+          'cmodel' => 'info:fedora/islandora:collectionCModel',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/mezzanineCollection/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+        array(
+          'pid' => variable_get('usc_mirc_mezzanine_collection', 'usc:mirc'),
+          'label' => 'Moving Images Research Collections',
+          'cmodel' => 'info:fedora/usc:mezzanineRootCollectionCModel',
+          'parent' => 'islandora:root',
+          'datastreams' => array(
+            array(
+              'dsid' => 'COLLECTION_POLICY',
+              'label' => 'Islandora Collection Policy',
+              'datastream_file' => "./$mod_path/collections/mezz_top/COLLECTION_POLICY.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+        array(
+          'pid' => variable_get('usc_mirc_cmodel_vro', 'usc:test-vro'),
+          'label' => 'USC Video Resource Object Content Model',
+          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/vro/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+        array(
+          'pid' => variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
+          'label' => 'USC Mezzanine Object Content Model',
+          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/mezzanine/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+        array(
+          'pid' => variable_get('usc_mirc_cmodel_access', 'usc:test-access'),
+          'label' => 'USC Access Object Content Model',
+          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/access/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+      ),
+    )
   );
 }

@@ -1,0 +1,16 @@
+<content_model xmlns="http://www.islandora.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.islandora.ca http://localhost/islandoracm.xsd"
+  name="Video Resource Object"
+  version="1">
+  <mimetypes>
+    <type>image/gif</type>
+    <type>image/jpeg</type>
+    <type>image/png</type>
+  </mimetypes>
+  <ingest_rules></ingest_rules>
+  <datastreams>
+    <datastream dsid="TN">
+      <display_method class="IslandoraVRO" file="displays/usc_vro.inc" method="showFieldSets" module="usc_mirc"></display_method>
+    </datastream>
+    <datastream dsid="PBCORE"></datastream>
+  </datastreams>
+</content_model>
