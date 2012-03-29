@@ -3,7 +3,7 @@
 abstract class BaseContentModel {
   protected $pid;
   
-  public __construct($pid, $page) {
+  public function __construct($pid) {
     module_load_include('inc', 'fedora_repository', 'api/fedora_item');
     $this->pid = $pid;
   }

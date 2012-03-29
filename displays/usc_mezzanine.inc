@@ -123,7 +123,7 @@ EOQ
       );
     
       //Allow migration of mezzanines to their proper collection
-      $d_form = _usc_mirc_get_unrendered_form('usc_mirc_switch_mezzanine_collection', $this->pid);
+      $d_form = _usc_mirc_get_unrendered_form('usc_mirc_switch_mezzanine_collection_form', $this->pid);
       //dsm($d_form);
       $tabset['tab-' . $i] = array(
         '#type' => 'tabpage',

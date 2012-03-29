@@ -6,7 +6,7 @@ abstract class BaseVideoDisplay extends BaseContentModel {
   protected $def_rel;
   
   public function __construct($pid) {
-    parent::_construct($pid);
+    parent::__construct($pid);
     $this->def_rel = variable_get('usc_mirc_relationship', 'isDerivativeOf');
   }
   
