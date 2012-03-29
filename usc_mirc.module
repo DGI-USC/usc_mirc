@@ -1,11 +1,18 @@
 <?php
 
+/**
+ * implementation of hook_perm()
+ * @deprecated in favour of basic Islandora/Fedora permissions.
+ */
 function usc_mirc_perm() {
   return array(
     'access mezzanines'
   );
 }
 
+/**
+ *  implementation of hook_islandora_content_model_forms_get_transforms()
+ */
 function usc_mirc_islandora_content_model_forms_get_transforms() {
   $p = drupal_get_path('module', 'usc_mirc') . '/transforms';
   return array(
@@ -14,6 +21,9 @@ function usc_mirc_islandora_content_model_forms_get_transforms() {
   );
 }
 
+/**
+ *  implementation of hook_theme()
+ */
 function usc_mirc_theme($existing, $type, $theme, $path) {
   return array(
     'usc_mirc_item' => array(
@@ -22,6 +32,10 @@ function usc_mirc_theme($existing, $type, $theme, $path) {
   );
 }
 
+/**
+ * theme implementation; returns markup for the given type
+ * @deprecated in favour of 'read forms', using 'defaultable_item'
+ */
 function theme_usc_mirc_item($element) {
   //dsm($element);
   $map = $element['#user_data'];
@@ -57,8 +71,10 @@ function theme_usc_mirc_item($element) {
     return theme('form_element', $element, $element['#value'] . (!empty($element['#children']) ? $element['#children'] : ''));
   }
 }
+
 /**
- * php functions used in XPath...
+ * php function used in XPath...
+ * @deprecated No longer necessary
  */
 function usc_mirc_create_person_string($name, $role) {
   $output = $name;
@@ -69,6 +85,10 @@ function usc_mirc_create_person_string($name, $role) {
   return new DOMText($output);
 }
 
+/**
+ * php function used in XPath...
+ * @deprecated No longer necessary
+ */
 function usc_mirc_create_date_string($start, $end) {
   $output = '';
   if (!empty($start) || !empty($end)) {
@@ -82,18 +102,17 @@ function usc_mirc_create_date_string($start, $end) {
   return new DOMText($output);
 }
 
-function usc_mirc_tabs_alter(&$element) {
-  //dsm($element);
+/**
+ *  implemenetation of hook_tabs_alter()
+ *  Really, just try to select the proper tab.
+ */
+function usc_mirc_tabs_alter(&$element) { 
+  //Switch to the Edit tab if necessary
   
-  //Change to the Edit tab if necessary
-  $edit =& $element['edit_metadata']['content']['pid'];
-  if (!empty($edit)) {
-    foreach ($element as $name => &$child) {
-      if (strpos($name, '#') === 0) {
-        continue;
-      }
-      elseif ($child['#type'] === 'tabpage') {
-        $child['#selected'] = FALSE;
+  if (!empty($element['edit_metadata']['content']['pid'])) {
+    foreach (element_children($element) as $child) {
+      if ($element[$child]['#type'] === 'tabpage') {
+        $element[$child]['#selected'] = FALSE;
       }
     }
     
@@ -109,8 +128,11 @@ function usc_mirc_tabs_alter(&$element) {
   }
 }
 
-/** Duplication of drupal_get_form; however, we exit early so other fun can happen. (Also skip a bit of batch stuff)
- *  "Fun stuff" such as being able to switch tabs based on the contents of the form...  Then again, that could probably be done in the alter function above...  Hmmm...
+/** 
+ * Duplication of drupal_get_form; however, we exit early (before rendering the
+ *   markup) so other fun can happen. (Also skip a bit of batch stuff)
+ * "Fun stuff" such as being able to switch tabs based on the contents of the
+ *   form...  Might be useful to take this into core?
  */
 function _usc_mirc_get_unrendered_form($form_id) {
   $form_state = array(
@@ -185,7 +207,17 @@ function _usc_mirc_get_unrendered_form($form_id) {
   return $form;
 }
 
+/**
+ *  implementation of hook_form_FORM-ID_alter(), on 'fedora_repository_ingest_form'
+ *
+ *  Adds in values for PID namespace and relationship to the parent object, in 
+ *    lieu of using a COLLECTION_POLICY in almost every object (since VROs are a 
+ *    'collection' of mezzanine files, and mezzanines are a 'collection' of access
+ *    variants).
+ */
 function usc_mirc_form_fedora_repository_ingest_form_alter(&$form, &$form_state) {
+  //dsm($form, 'ingest form, before alter');
+  
   if ($form_state['storage']['step'] === 1) {
     if (in_array($form_state['storage']['content_model'], array(
       variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
@@ -204,10 +236,13 @@ function usc_mirc_form_fedora_repository_ingest_form_alter(&$form, &$form_state)
       //TODO: Add the of the selected instantiation xml to state/storage/xml_data
     }
   }
+  
+  //dsm($form, 'ingest form, after alter');
 }
 
 /**
- *  Get the relevant info...
+ *  Get the instatiation to use to create a mezzanine from a preservation master.
+ *  TODO:  Finish implementing.
  */
 function _usc_mirc_get_instantiation_array() {
   $toReturn = array(
@@ -257,6 +292,11 @@ EOQ
   return $toReturn;
 }
 
+/**
+ * implementation of hook_menu
+ *
+ * Adds in autocomplete callback path and the admin page for this module.
+ */
 function usc_mirc_menu() {
   return array(
     'usc/streaming_autocomplete' => array(
@@ -358,6 +398,9 @@ function usc_mirc_admin_form(&$form_state) {
   ));
 }
 
+/**
+ * form definition to create access variants.
+ */
 function usc_mirc_redirect_form(&$form_state, $parent_pid) {
   return array(
     'parent_pid' => array(
@@ -382,14 +425,17 @@ function usc_mirc_redirect_form(&$form_state, $parent_pid) {
   );
 }
 
+/**
+ * Specific to mezzanines...
+ */
 function _usc_mirc_get_sub_collections($collection = NULL) {
   if (empty($collection)) { //XXX:  Make into configuration?
     $collection = variable_get('usc_mirc_mezzanine_collection', variable_get('fedora_repository_pid', 'usc:mirc'));
   }
   
   //Get direct children of the collection (with their titles)
-  module_load_include('inc', 'usc_mirc', 'mezzanine');
-  $results = BaseVideoDisplay::_perform_sparql_query(<<<EOQ
+  module_load_include('inc', 'usc_mirc', 'displays/base_cmodel');
+  $results = BaseContentModel::_perform_sparql_query(<<<EOQ
 PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
 PREFIX fm: <info:fedora/fedora-system:def/model#>
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
@@ -397,6 +443,7 @@ SELECT ?subcollection ?title
 FROM <#ri>
 WHERE {
   ?subcollection fre:isMemberOfCollection <info:fedora/$collection> ;
+                 fm:hasModel <info:fedora/usc:mezzanineCollectionCModel> ;
                  fm:state fm:Active ;
                  dc:title ?title .
 }
@@ -411,7 +458,10 @@ EOQ
   return $options;
 }
 
-function usc_mirc_switch_mezzanine_collection(&$form_state, $object_pid) {
+/**
+ * Form for migrating a mezzanine to a new collection
+ */
+function usc_mirc_switch_mezzanine_collection_form(&$form_state, $object_pid) {
   return array(
     'object_pid' => array(
       '#type' => 'hidden',
@@ -430,7 +480,10 @@ function usc_mirc_switch_mezzanine_collection(&$form_state, $object_pid) {
   );
 }
 
-function usc_mirc_switch_mezzanine_collection_submit($form, &$form_state) {
+/**
+ * Submission handler for migrating mezzanines.
+ */
+function usc_mirc_switch_mezzanine_collection_form_submit($form, &$form_state) {
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   
   $values = $form_state['values'];
@@ -443,6 +496,10 @@ function usc_mirc_switch_mezzanine_collection_submit($form, &$form_state) {
   }
 }
 
+/**
+ *  Submission handler which creates a new object and adds a Redirect stream.
+ *  Creates 'access' variants.
+ */
 function usc_mirc_redirect_form_submit($form, &$form_state) {
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   
@@ -459,6 +516,9 @@ function usc_mirc_redirect_form_submit($form, &$form_state) {
   $new_item->add_relationship('fedora-model:hasModel', variable_get('usc_mirc_cmodel_access', 'usc:test-access'));
 }
 
+/**
+ * array_filter callback to find filenames which (should) represent a video file.
+ */
 function _usc_mirc_is_video_filename($filename) {
   static $exts = NULL;
   if (empty($exts)) {
@@ -475,7 +535,8 @@ function _usc_mirc_is_video_filename($filename) {
 }
 
 /**
- *  Get an array of all the files in this directory (including subdirectories if $recurse is TRUE).
+ *  Get an array of all the files in this directory (including subdirectories 
+ *    if $recurse is TRUE).
  */
 function _usc_mirc_traverse_directory($sub_dir = '.', $recurse = TRUE) {
   //TODO: Make configuration
@@ -504,6 +565,9 @@ function _usc_mirc_traverse_directory($sub_dir = '.', $recurse = TRUE) {
   return $videos;
 }
 
+/**
+ * autocomplete callback used to obtain streaming URLs.
+ */
 function usc_mirc_autocomplete_streaming_url($string) {
   $videos = _usc_mirc_traverse_directory();
   $videos = array_filter($videos, '_usc_mirc_is_video_filename');
@@ -514,6 +578,9 @@ function usc_mirc_autocomplete_streaming_url($string) {
   return;
 }
 
+/**
+ * implementation of hook_islandora_solr_primary_display()
+ */
 function usc_mirc_islandora_solr_primary_display() {
   return array(
     'usc_mirc_display' => array(
@@ -527,6 +594,11 @@ function usc_mirc_islandora_solr_primary_display() {
   );
 }
 
+/**
+ *  implementation of hook_required_fedora_objects()
+ *
+ *  Sets up objects in Fedora, in the manner of a solution pack.
+ */
 function usc_mirc_required_fedora_objects() {
   $mod_path = drupal_get_path('module', 'usc_mirc') . '/fedora_objects';
   return array(
@@ -538,20 +610,14 @@ function usc_mirc_required_fedora_objects() {
           'pid' => 'usc:mezzanineRootCollectionCModel',
           'label' => 'Moving Images Research Collections',
           'cmodel' => 'info:fedora/islandora:collectionCModel',
+          //'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
           'parent' => 'info:fedora/islandora:ContentModelsCollection',
-          'datastreams' => array(
-            array(
-              'dsid' => 'ISLANDORACM',
-              'label' => 'Islandora content model',
-              'datastream_file' => "./$mod_path/cmodels/vro/ISLANDORACM.xml",
-              'dsversion' => TRUE,
-            ),
-          ),
         ),
         array(
           'pid' => 'usc:mezzanineCollectionCModel',
           'label' => 'Mezzanine Collection Content Model',
-          'cmodel' => 'info:fedora/islandora:collectionCModel',
+          //'cmodel' => 'info:fedora/islandora:collectionCModel',
+          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
           'parent' => 'info:fedora/islandora:ContentModelsCollection',
           'datastreams' => array(
             array(
@@ -565,7 +631,8 @@ function usc_mirc_required_fedora_objects() {
         array(
           'pid' => variable_get('usc_mirc_mezzanine_collection', 'usc:mirc'),
           'label' => 'Moving Images Research Collections',
-          'cmodel' => 'info:fedora/usc:mezzanineRootCollectionCModel',
+          //'cmodel' => 'info:fedora/usc:mezzanineRootCollectionCModel',
+          'cmodel' => 'info:fedora/islandora:collectionCModel',
           'parent' => 'islandora:root',
           'datastreams' => array(
             array(
@@ -573,6 +640,32 @@ function usc_mirc_required_fedora_objects() {
               'label' => 'Islandora Collection Policy',
               'datastream_file' => "./$mod_path/collections/mezz_top/COLLECTION_POLICY.xml",
               'dsversion' => TRUE,
+            ),
+            array(
+              'dsid' => 'TN',
+              'label' => 'Thumbnail',
+              'datastream_file' => './' . drupal_get_path('module', 'fedora_repository') . '/images/Crystal_Clear_filesystem_folder_grey.png',
+              'mimetype' => 'image/png',
+            ),
+          ),
+        ),
+        array(
+          'pid' => 'usc:preservation_masters',
+          'label' => 'MIRC Preservation Master Collection',
+          'cmodel' => 'info:fedora/islandora:collectionCModel',
+          'parent' => 'islandora:root',
+          'datastreams' => array(
+            array(
+              'dsid' => 'COLLECTION_POLICY',
+              'label' => 'Islandora Collection Policy',
+              'datastream_file' => "./$mod_path/collections/preservation_masters/COLLECTION_POLICY.xml",
+              'dsversion' => TRUE,
+            ),
+            array(
+              'dsid' => 'TN',
+              'label' => 'Thumbnail',
+              'datastream_file' => './' . drupal_get_path('module', 'fedora_repository') . '/images/Crystal_Clear_filesystem_folder_grey.png',
+              'mimetype' => 'image/png',
             ),
           ),
         ),
