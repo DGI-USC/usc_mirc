@@ -3,6 +3,7 @@
     xmlns="http://www.pbcore.org/PBCore/PBCoreNamespace.html"
     exclude-result-prefixes="">
   <xsl:output method="xml" indent="yes" encoding="UTF-8"/>
+  <!-- Will emit a pbcoreInstantiation element if not set to true. -->
   <xsl:param name="instanceDoc">TRUE</xsl:param>
   
   <xsl:template match="File[1]">
@@ -42,12 +43,6 @@
     </instantiationIdentifier>
   </xsl:template>
   
-  <xsl:template match="Media_UUID" mode="general">
-    <instantiationIdentifier source="Media_UUID">
-      <xsl:value-of select="normalize-space(text())"/>
-    </instantiationIdentifier>
-  </xsl:template>
-  
   <xsl:template match="Color_space" mode="general">
     <instantiationColors>
       <xsl:value-of select="normalize-space(text())"/>
@@ -55,7 +50,7 @@
   </xsl:template>
   
   <xsl:template match="File_last_modification_date[1]" mode="general">
-    <instantiationDate dateType="modified">
+    <instantiationDate dateType="created">
       <xsl:value-of select="normalize-space(text())"/>
     </instantiationDate>
   </xsl:template>
