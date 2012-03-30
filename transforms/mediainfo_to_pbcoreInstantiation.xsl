@@ -42,6 +42,18 @@
     </instantiationIdentifier>
   </xsl:template>
   
+  <xsl:template match="Media_UUID" mode="general">
+    <instantiationIdentifier source="Media_UUID">
+      <xsl:value-of select="normalize-space(text())"/>
+    </instantiationIdentifier>
+  </xsl:template>
+  
+  <xsl:template match="Color_space" mode="general">
+    <instantiationColors>
+      <xsl:value-of select="normalize-space(text())"/>
+    </instantiationColors>
+  </xsl:template>
+  
   <xsl:template match="File_last_modification_date[1]" mode="general">
     <instantiationDate dateType="modified">
       <xsl:value-of select="normalize-space(text())"/>
@@ -78,16 +90,28 @@
     </instantiationDataRate>
   </xsl:template>
   
-  <xsl:template match="Codec_CC" mode="essence">
+  <xsl:template match="Video_Language_List[1]" mode="general">
+    <instantiationLanguage>
+      <xsl:value-of select="normalize-space(text())"/>
+    </instantiationLanguage>
+  </xsl:template>
+  
+  <xsl:template match="Standard" mode="essence">
     <essenceTrackStandard>
       <xsl:value-of select="normalize-space(text())"/>
     </essenceTrackStandard>
   </xsl:template>
   
-  <xsl:template match="Codec_Info" mode="essence">
+  <xsl:template match="Format" mode="essence">
     <essenceTrackEncoding>
       <xsl:value-of select="normalize-space(text())"/>
     </essenceTrackEncoding>
+  </xsl:template>
+  
+  <xsl:template match="Sampling_rate[1]" mode="essence">
+    <essenceTrackSamplingRate>
+      <xsl:value-of select="normalize-space(text())"/>
+    </essenceTrackSamplingRate>
   </xsl:template>
   
   <xsl:template match="Bit_rate[1]" mode="essence">
@@ -96,28 +120,34 @@
     </essenceTrackDataRate>
   </xsl:template>
   
+  <xsl:template match="Bit_depth[1]" mode="essence">
+    <essenceTrackBitDepth>
+      <xsl:value-of select="normalize-space(text())"/>
+    </essenceTrackBitDepth>
+  </xsl:template>
+  
   <xsl:template match="Frame_rate[1]" mode="essence">
     <essenceTrackFrameRate unitsOfMeasure="frames per second">
       <xsl:value-of select="normalize-space(text())"/>
     </essenceTrackFrameRate>
   </xsl:template>
   
-  <xsl:template match="Display_aspect_ratio[1]" mode="essence">
+  <xsl:template match="Original_width[1]" mode="essence">
+    <essenceTrackFrameSize>
+      <xsl:value-of select="normalize-space(concat(text(), 'x', ../Original_height[1]/text()))"/>
+    </essenceTrackFrameSize>
+  </xsl:template>
+  
+  <xsl:template match="Display_aspect_ratio[last()]" mode="essence">
     <essenceTrackAspectRatio>
       <xsl:value-of select="normalize-space(text())"/>
     </essenceTrackAspectRatio>
   </xsl:template>
   
-  <xsl:template match="Duration[last()]" mode="essence">
-    <essenceTrackDuration>
+  <xsl:template match="Language[2]" mode="essence">
+    <essenceTrackLanguage>
       <xsl:value-of select="normalize-space(text())"/>
-    </essenceTrackDuration>
-  </xsl:template>
-  
-  <xsl:template match="Bit_depth[1]" mode="essence">
-    <essenceTrackBitDepth>
-      <xsl:value-of select="normalize-space(text())"/>
-    </essenceTrackBitDepth>
+    </essenceTrackLanguage>
   </xsl:template>
   
   <xsl:template match="Stream_size[1]" mode="essence">
