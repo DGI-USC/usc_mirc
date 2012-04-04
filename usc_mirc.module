@@ -1,17 +1,7 @@
 <?php
 
 /**
- * implementation of hook_perm()
- * @deprecated in favour of basic Islandora/Fedora permissions.
- */
-function usc_mirc_perm() {
-  return array(
-    'access mezzanines'
-  );
-}
-
-/**
- *  implementation of hook_islandora_content_model_forms_get_transforms()
+ *  implementation of islandora_content_model_forms' hook_islandora_content_model_forms_get_transforms()
  */
 function usc_mirc_islandora_content_model_forms_get_transforms() {
   $p = drupal_get_path('module', 'usc_mirc') . '/transforms';
@@ -26,50 +16,149 @@ function usc_mirc_islandora_content_model_forms_get_transforms() {
  */
 function usc_mirc_theme($existing, $type, $theme, $path) {
   return array(
-    'usc_mirc_item' => array(
-      'arguments' => array('element' => NULL)
-    )
+    'usc_mirc_item' => array( //@deprecated...  But anyway.
+      'arguments' => array('element' => NULL),
+      'file' => 'usc_mirc.theme.inc',
+    ),
   );
 }
 
 /**
- * theme implementation; returns markup for the given type
- * @deprecated in favour of 'read forms', using 'defaultable_item'
+ * implementation of hook_islandora_solr_primary_display()
  */
-function theme_usc_mirc_item($element) {
-  //dsm($element);
-  $map = $element['#user_data'];
-  $pbcore = $map['pbcore'];
-  
-  //Obtain a traversable list of contexts
-  $context = array($pbcore->document->documentElement);
-  if (!empty($map['context_xpath'])) {
-    $context = $pbcore->query($map['context_xpath']);
-  }
+function usc_mirc_islandora_solr_primary_display() {
+  return array(
+    'usc_mirc_display' => array(
+      'name' => t('USC display'),
+      'module' => 'usc_mirc',
+      'file' => 'SolrResults.inc',
+      'class' => 'USC_Results',
+      'function' => 'displayResults',
+      'description' => t('More specific output.'),
+    ),
+  );
+}
 
-  $temp = array();
-  foreach ($context as $con) {
-    $results = $pbcore->query($map['xpath'], $con);
-    
-    foreach($results as $result) {
-      //dsm($result, 'result');
-      $text = $result->textContent;
-      if (!empty($text)) {
-        $temp[] = $text;
-      }
-    }
-  }
-  
-  if (count($temp) === 1) {
-    $element['#value'] = $temp[0];
-  } 
-  elseif (count($temp) > 1) {
-    $element['#value'] = theme('item_list', $temp);
-  }
-  
-  if (!empty($element['#value'])) {
-    return theme('form_element', $element, $element['#value'] . (!empty($element['#children']) ? $element['#children'] : ''));
-  }
+/**
+ *  implementation of hook_required_fedora_objects()
+ *
+ *  Sets up objects in Fedora, in the manner of a solution pack.
+ */
+function usc_mirc_required_fedora_objects() {
+  $mod_path = drupal_get_path('module', 'usc_mirc') . '/fedora_objects';
+  return array(
+    'usc_mirc' => array(
+      'module' => 'usc_mirc',
+      'title' => t('USC Video Content Models'),
+      'objects' => array(
+        array(
+          'pid' => 'usc:mezzanineRootCollectionCModel',
+          'label' => 'Moving Images Research Collections',
+          'cmodel' => 'info:fedora/islandora:collectionCModel',
+          //'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+        ),
+        array(
+          'pid' => 'usc:mezzanineCollectionCModel',
+          'label' => 'Mezzanine Collection Content Model',
+          //'cmodel' => 'info:fedora/islandora:collectionCModel',
+          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/mezzanineCollection/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+        array(
+          'pid' => variable_get('usc_mirc_mezzanine_collection', 'usc:mirc'),
+          'label' => 'Moving Images Research Collections',
+          //'cmodel' => 'info:fedora/usc:mezzanineRootCollectionCModel',
+          'cmodel' => 'info:fedora/islandora:collectionCModel',
+          'parent' => 'islandora:root',
+          'datastreams' => array(
+            array(
+              'dsid' => 'COLLECTION_POLICY',
+              'label' => 'Islandora Collection Policy',
+              'datastream_file' => "./$mod_path/collections/mezz_top/COLLECTION_POLICY.xml",
+              'dsversion' => TRUE,
+            ),
+            array(
+              'dsid' => 'TN',
+              'label' => 'Thumbnail',
+              'datastream_file' => './' . drupal_get_path('module', 'fedora_repository') . '/images/Crystal_Clear_filesystem_folder_grey.png',
+              'mimetype' => 'image/png',
+            ),
+          ),
+        ),
+        array(
+          'pid' => 'usc:preservation_masters',
+          'label' => 'MIRC Preservation Master Collection',
+          'cmodel' => 'info:fedora/islandora:collectionCModel',
+          'parent' => 'islandora:root',
+          'datastreams' => array(
+            array(
+              'dsid' => 'COLLECTION_POLICY',
+              'label' => 'Islandora Collection Policy',
+              'datastream_file' => "./$mod_path/collections/preservation_masters/COLLECTION_POLICY.xml",
+              'dsversion' => TRUE,
+            ),
+            array(
+              'dsid' => 'TN',
+              'label' => 'Thumbnail',
+              'datastream_file' => './' . drupal_get_path('module', 'fedora_repository') . '/images/Crystal_Clear_filesystem_folder_grey.png',
+              'mimetype' => 'image/png',
+            ),
+          ),
+        ),
+        array(
+          'pid' => variable_get('usc_mirc_cmodel_vro', 'usc:test-vro'),
+          'label' => 'USC Video Resource Object Content Model',
+          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/vro/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+        array(
+          'pid' => variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
+          'label' => 'USC Mezzanine Object Content Model',
+          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/mezzanine/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+        array(
+          'pid' => variable_get('usc_mirc_cmodel_access', 'usc:test-access'),
+          'label' => 'USC Access Object Content Model',
+          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
+          'parent' => 'info:fedora/islandora:ContentModelsCollection',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'datastream_file' => "./$mod_path/cmodels/access/ISLANDORACM.xml",
+              'dsversion' => TRUE,
+            ),
+          ),
+        ),
+      ),
+    )
+  );
 }
 
 /**
@@ -216,8 +305,6 @@ function _usc_mirc_get_unrendered_form($form_id) {
  *    variants).
  */
 function usc_mirc_form_fedora_repository_ingest_form_alter(&$form, &$form_state) {
-  //dsm($form, 'ingest form, before alter');
-  
   if ($form_state['storage']['step'] === 1) {
     if (in_array($form_state['storage']['content_model'], array(
       variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
@@ -236,72 +323,35 @@ function usc_mirc_form_fedora_repository_ingest_form_alter(&$form, &$form_state)
       //TODO: Add the of the selected instantiation xml to state/storage/xml_data
     }
   }
-  
-  //dsm($form, 'ingest form, after alter');
-}
-
-/**
- *  Get the instatiation to use to create a mezzanine from a preservation master.
- *  TODO:  Finish implementing.
- */
-function _usc_mirc_get_instantiation_array() {
-  $toReturn = array(
-    'none' => t('')
-  );
-  
-  //1. get the parent PBCore
-  //1.1 identify the parent(s)
-  module_load_include('inc', 'usc_mirc', 'mezzanine');
-  $parents = BaseVideoDisplay::_perform_sparql_query(<<<EOQ
-PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
-PREFIX fm: <info:fedora/fedora-system:def/model#>
-PREFIX fv: <info:fedora/fedora-system:def/view#>
-SELECT ?parent
-FROM <#ri>
-WHERE {
-  ?this fre:isDerivativeOf ?parent .
-  ?parent fm:state fm:Active ;
-          fv:disseminates ?DSs .
-  ?DSs fv:disseminationType <info:fedora/*/PBCORE> ;
-       fm:state fm:Active .  
-}
-EOQ
-);
-  $num_parents = count($parents);
-  $parent = NULL;
-  
-  if ($num_parents > 1) {
-    $uri = $parents[0]['parent'];
-    $parent = substr($uri, strrpos($uri, '/'));
-    watchdog('usc_mirc', 'More than one parent!? Using first (%parent_pid)', array('%parent_pid' => $parent), WATCHDOG_WARNING);
-  }
-  elseif ($num_parents === 1) {
-    $uri = $parents[0]['parent'];
-    $parent = substr($uri, strrpos($uri, '/'));
-  }
-  $pbcore = DOMDocument::load(url("fedora/repository/$parent/PBCORE"));
-  if ($pbcore !== FALSE) {  
-    $pbcore = new DOMXPath($pbcore);
-    //add each instantiation to the array to return.
-    $pbcore->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
-    foreach ($pbcore->query('//pb:pbcoreInstantiation') as $node) {
-      $toReturn[] = 'asdf';
-    }
-  }
-  
-  return $toReturn;
 }
 
 /**
  * implementation of hook_menu
  *
- * Adds in autocomplete callback path and the admin page for this module.
+ * Adds in autocomplete callback paths and the admin page for this module.
  */
 function usc_mirc_menu() {
   return array(
-    'usc/streaming_autocomplete' => array(
-      'page callback' => 'usc_mirc_autocomplete_streaming_url',
-      'access arguments' => array('access content'),
+    'usc/streaming_autocomplete' => array(  //Autocomplete path for access copies
+      'page callback' => 'usc_mirc_autocomplete_video_url',
+      'page arguments' => array(
+        variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu'), //URL base
+        variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access'),         //Filesystem base
+        2,                                                                          //String
+      ),
+      'file' => 'usc_mirc.autocomplete.inc',
+      'access arguments' => array('ingest new fedora objects'),
+      'type' => MENU_CALLBACK,
+    ),
+    'usc/mezzanine_autocomplete' => array(  //Autocomplete path for mezzanines.
+      'page callback' => 'usc_mirc_autocomplete_video_url',
+      'page arguments' => array(
+        variable_get('usc_mirc_mezzanine_url', 'file:///mnt/mirc/mezz/mezzanine'),  //URL base
+        variable_get('usc_mirc_mezzanine_folder', '/mnt/mirc/mezz/mezzanine'),      //Filesystem base
+        2,                                                                          //String
+      ),
+      'file' => 'usc_mirc.autocomplete.inc',
+      'access arguments' => array('ingest new fedora objects'),
       'type' => MENU_CALLBACK,
     ),
     'admin/settings/fedora_repository/usc_mirc' => array(
@@ -309,120 +359,99 @@ function usc_mirc_menu() {
       'description' => t('A number of configuration parameters used in the display of MIRC\'s video collections'),
       'page callback' => 'drupal_get_form',
       'page arguments' => array('usc_mirc_admin_form'),
+      'file' => 'usc_mirc.admin.inc',
       'access arguments' => array('administer site configuration'),
       'type' => MENU_LOCAL_TASK,
     ),
   );
 }
 
-function usc_mirc_admin_form(&$form_state) {
-  $i = -100;
-  return system_settings_form(array(
-    'usc_mirc_mezzanine_collection' => array(
-      '#type' => 'textfield',
-      '#weight' => $i++,
-      '#title' => t('Top mezzanine collection'),
-      '#description' => t('May the same as the top collection of the Islandora config.  Used to populate the list of collections to which a mezzanine may be migrated'),
-      '#default_value' => variable_get('usc_mirc_mezzanine_collection', variable_get('fedora_repository_pid', 'usc:mirc')),
-    ),
-    'usc_mirc_namespace' => array(
-      '#type' => 'textfield',
-      '#weight' => $i++,
-      '#title' => t('MIRC PID namespace'),
-      '#description' => t('The namespace/prefix with which new items will be created in Fedora (where a COLLECTION_POLICY doesn\'t already dictate it).'),
-      '#default_value' => variable_get('usc_mirc_namespace', 'usc'),
-    ),
-    'usc_mirc_streaming_url' => array(
-      '#type' => 'textfield',
-      '#weight' => $i++,
-      '#title' => t('Streaming base URL'),
-      '#description' => t('URL (possibly with port and path), without a terminiating slash. (Used during access copy autocompletion)'),
-      '#default_value' => variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu'),
-    ),
-    'usc_mirc_streaming_folder' => array(
-      '#type' => 'textfield',
-      '#weight' => $i++,
-      '#title' => t('Streaming folder'),
-      '#description' => t('Mountpoint/folder on server under which the streaming access copies are located. (Used during access copy autocompletion)'),
-      '#default_value' => variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access'),
-    ),
-    'usc_mirc_streaming_extensions' => array(
-      '#type' => 'textfield',
-      '#weight' => $i++,
-      '#title' => t('File extensions'),
-      '#description' => t('Space-separated list of h264 file extensions to autocomplete'),
-      '#default_value' => variable_get('usc_mirc_streaming_extensions', '.m4v .mp4 .flv .mov'),
-    ),
-    'breakables' => array(
-      '#type' => 'fieldset',
-      '#title' => t('Breakables (CAUTION!)'),
-      '#description' => t('Settings which probably should not be touched after the initial installation.'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#weight' => $i++,
-      'usc_mirc_relationship' => array(
-        '#type' => 'textfield',
-        '#weight' => $i++,
-        '#title' => t('Relationship'),
-        '#description' => t('RELS-EXT relationship used to relate mezzanines to VROs and access copies to mezzanines.  Probably a bad idea to change this after objects have already been created, as existing objects will not be changed.'),
-        '#default_value' => variable_get('usc_mirc_relationship', 'isDerivativeOf'),
-      ),
-      'cmodels' => array(
-        '#type' => 'fieldset',
-        '#weight' => $i++,
-        '#title' => t('Content Models'),
-        '#description' => t('Content Models used for different purposes.  Probably a bad idea to change any after objects have been created with them (existing objects may be orphaned).  Fields may be hidden?'),
-        'usc_mirc_cmodel_vro' => array(
-          '#type' => 'textfield',
-          '#weight' => $i++,
-          '#title' => t('VRO Content Model'),
-          '#description' => t('Content Model used for Video Resource Objects.'),
-          '#default_value' => variable_get('usc_mirc_cmodel_vro', 'usc:test-vro'),
-        ),
-        'usc_mirc_cmodel_mezzanine' => array(
-          '#type' => 'textfield',
-          '#weight' => $i++,
-          '#title' => t('Mezzanine Content Model'),
-          '#description' => t('Content Model used for mezzanine objects.'),
-          '#default_value' => variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
-        ),
-        'usc_mirc_cmodel_access' => array(
-          '#type' => 'textfield',
-          '#weight' => $i++,
-          '#title' => t('Access Content Model'),
-          '#description' => t('Content Model used for access copy objects.'),
-          '#default_value' => variable_get('usc_mirc_cmodel_access', 'usc:test-access'),
-        ),
-      ),
-    ),
-  ));
-}
-
-/**
- * form definition to create access variants.
- */
-function usc_mirc_redirect_form(&$form_state, $parent_pid) {
+function usc_mirc_add_mezzanine_form(&$form_state, $parent_pid) {
   return array(
     'parent_pid' => array(
       '#type' => 'hidden',
       '#value' => $parent_pid,
     ),
-    'title' => array(
+    'file_name' => array(
       '#type' => 'textfield',
-      '#title' => t('Object label'),
-      '#required' => TRUE,
+      '#title' => t('Mezzanine file path'),
+      '#description' => t('Used to extract technical metadata.'),
+      //'#autocomplete_path' => 'usc/mezzanine_autocomplete', //TODO:  Implement mezzanine autocomplete
     ),
-    'streaming_url' => array(
-      '#type' => 'textfield',
-      '#title' => t('Streaming URL'),
-      '#required' => TRUE,
-      '#autocomplete_path' => 'usc/streaming_autocomplete',
+    'derivative_type' => array(
+      '#type' => 'select',
+      '#title' => t('Derivative type'),
+      '#description' => t('Whether this mezzanine is edited, or so on.'),
+      '#options' => array( //TODO:  Built list programatically...  Allow user configurable values (changable in admin form?)
+        'original' => t('Original'),
+        'edited' => t('Edited'),
+        'featured' => t('Featured'),
+      ),
     ),
-    'submit' => array(
-      '#type' => 'submit',
-      '#value' => 'Ingest',
-    )
+    'derivative_format' => array(
+      '#type' => 'select',
+      '#title' => t('Frame format'),
+      '#options' => array(
+        'full_frame' => t('Full Frame (including perfs)'),
+        'cropped' => t('Cropped'),
+      ),
+    ),
   );
+}
+
+function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
+  $values = $form_state['values'];
+  $file = $values['file_name'];
+  if (!(is_file($file) && is_readable($file))) {
+    form_set_error('file_name', t('The file %file_name (at %file_path) does not seem to exist or is not readable!', array(
+      '%file_path' => $file,
+      '%file_name' => $form['file_name']['#options'][$file],
+    )));
+  }
+}
+
+function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
+  global $user;
+  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  
+  $values = $form_state['values'];
+  
+  //1. Check that the mezzanine file exists. (done in validate method)
+  //2. Grab media info output for the given file...
+  $command = 'mediainfo --Full --Output=XML ' . escapeshellarg($values['file_name']);
+  $mediainfo_output = system(escapeshellcommand($command));
+  $mediainfo_doc = DOMDocument::loadXML($mediainfo_output);
+  
+  //3. Transform the mediainfo file to pbcore
+  $pbcore_transform = DOMDocument::load(drupal_get_path('module', 'usc_mirc') . '/transforms/mediainfo_to_pbcoreInstantiation.xsl');
+  $transformer = new XSLTProcessor();
+  $transformer->importStyleSheet($pbcore_transform);
+  
+  $pbcore_doc = $transformer->transformToDoc($mediainfo_doc);
+  unset($mediainfo_doc); //No longer need this (have the transformed version), free it up.
+  
+  //4. Add the type and format fields
+  //TODO:  Actually add the extra info.
+  $pbcore = $pbcore_doc->saveXML();
+  
+  //5. Create DC transformation of PBCore.
+  $dc_transform = DOMDocument::load(drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xsl');
+  $transformer->importStyleSheet($dc_transform);
+  
+  $dc = $transformer->transformToXML($pbcore_doc);
+  unset($pbcore_doc); //No longer need this (have it in a string), free it up.
+  
+  //6. If we've properly created the metadata, create the Fedora Object
+  $pid_namespace = variable_get('usc_mirc_namespace', 'usc');
+  $pid = Fedora_Item::get_next_PID_in_namespace($pid_namespace);
+  //TODO:  Get the title somehow.
+  $new_item = Fedora_Item::ingest_new_item($pid, 'A', $values['title'], $user->name);
+  
+  //7. Relate the new object to it's parent
+  $new_item->add_relationship(variable_get('usc_mirc_relationship', 'isDerivativeOf'), $values['parent_pid']);
+  //8. Relate to the CModel.
+  $new_item->add_relationship('fedora-model:hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'));
+  //9. Add the derived metadata.
 }
 
 /**
@@ -497,6 +526,33 @@ function usc_mirc_switch_mezzanine_collection_form_submit($form, &$form_state) {
 }
 
 /**
+ * form definition to create access variants.
+ */
+function usc_mirc_redirect_form(&$form_state, $parent_pid) {
+  return array(
+    'parent_pid' => array(
+      '#type' => 'hidden',
+      '#value' => $parent_pid,
+    ),
+    'title' => array(
+      '#type' => 'textfield',
+      '#title' => t('Object label'),
+      '#required' => TRUE,
+    ),
+    'streaming_url' => array(
+      '#type' => 'textfield',
+      '#title' => t('Streaming URL'),
+      '#required' => TRUE,
+      '#autocomplete_path' => 'usc/streaming_autocomplete',
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => 'Ingest',
+    )
+  );
+}
+
+/**
  *  Submission handler which creates a new object and adds a Redirect stream.
  *  Creates 'access' variants.
  */
@@ -517,201 +573,64 @@ function usc_mirc_redirect_form_submit($form, &$form_state) {
 }
 
 /**
- * array_filter callback to find filenames which (should) represent a video file.
+ *  Get the instatiation to use to create a mezzanine from a preservation master.
+ *  TODO:  Finish implementing.
+ *  @deprecated Don't think this is actually necessary.
  */
-function _usc_mirc_is_video_filename($filename) {
-  static $exts = NULL;
-  if (empty($exts)) {
-    explode(
-      ' ', 
-      variable_get(
-        'usc_mirc_streaming_extensions',
-        '.m4v .mp4 .flv .mov'
-      )
-    );
-  }
-  
-  return in_array(substr($filename, -4), $exts);
-}
-
-/**
- *  Get an array of all the files in this directory (including subdirectories 
- *    if $recurse is TRUE).
- */
-function _usc_mirc_traverse_directory($sub_dir = '.', $recurse = TRUE) {
-  //TODO: Make configuration
-  static $sb = NULL;
-  static $fsb = NULL;
-  
-  if (empty($sb) || empty($fsb)) {
-    $sb = variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu');
-    $fsb = variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access');
-  }
-  
-  $videos = array();
-  
-  $dir = dir("$fsb/$sub_dir");
-  while ($entry = $dir->read()) {
-    $this_entry = "$sub_dir/$entry";
-    if ($recurse && is_dir("$fsb/$this_entry")) {
-      $videos = array_merge($videos, _usc_mirc_traverse_directory($this_entry, $recurse));
-    }
-    elseif ($string === '*' || strpos($entry, $string) === 0) {
-      $videos["$sb/$this_entry"] = $entry;
-    }
-  }
-  $dir->close();
-  
-  return $videos;
-}
-
-/**
- * autocomplete callback used to obtain streaming URLs.
- */
-function usc_mirc_autocomplete_streaming_url($string) {
-  $videos = _usc_mirc_traverse_directory();
-  $videos = array_filter($videos, '_usc_mirc_is_video_filename');
-  
-  ksort($videos);
-  drupal_json($videos);
-
-  return;
-}
-
-/**
- * implementation of hook_islandora_solr_primary_display()
- */
-function usc_mirc_islandora_solr_primary_display() {
-  return array(
-    'usc_mirc_display' => array(
-      'name' => t('USC display'),
-      'module' => 'usc_mirc',
-      'file' => 'SolrResults.inc',
-      'class' => 'USC_Results',
-      'function' => 'displayResults',
-      'description' => t('More specific output.'),
-    ),
+function _usc_mirc_get_instantiation_array() {
+  $toReturn = array(
+    'none' => t('')
   );
+  
+  //1. get the parent PBCore
+  //1.1 identify the parent(s)
+  module_load_include('inc', 'usc_mirc', 'mezzanine');
+  $parents = BaseVideoDisplay::_perform_sparql_query(<<<EOQ
+PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+PREFIX fm: <info:fedora/fedora-system:def/model#>
+PREFIX fv: <info:fedora/fedora-system:def/view#>
+SELECT ?parent
+FROM <#ri>
+WHERE {
+  ?this fre:isDerivativeOf ?parent .
+  ?parent fm:state fm:Active ;
+          fv:disseminates ?DSs .
+  ?DSs fv:disseminationType <info:fedora/*/PBCORE> ;
+       fm:state fm:Active .  
+}
+EOQ
+);
+  $num_parents = count($parents);
+  $parent = NULL;
+  
+  if ($num_parents > 1) {
+    $uri = $parents[0]['parent'];
+    $parent = substr($uri, strrpos($uri, '/'));
+    watchdog('usc_mirc', 'More than one parent!? Using first (%parent_pid)', array('%parent_pid' => $parent), WATCHDOG_WARNING);
+  }
+  elseif ($num_parents === 1) {
+    $uri = $parents[0]['parent'];
+    $parent = substr($uri, strrpos($uri, '/'));
+  }
+  $pbcore = DOMDocument::load(url("fedora/repository/$parent/PBCORE"));
+  if ($pbcore !== FALSE) {  
+    $pbcore = new DOMXPath($pbcore);
+    //add each instantiation to the array to return.
+    $pbcore->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+    foreach ($pbcore->query('//pb:pbcoreInstantiation') as $node) {
+      $toReturn[] = 'asdf';
+    }
+  }
+  
+  return $toReturn;
 }
 
 /**
- *  implementation of hook_required_fedora_objects()
- *
- *  Sets up objects in Fedora, in the manner of a solution pack.
+ * implementation of hook_perm()
+ * @deprecated in favour of basic Islandora/Fedora permissions.
  */
-function usc_mirc_required_fedora_objects() {
-  $mod_path = drupal_get_path('module', 'usc_mirc') . '/fedora_objects';
+function usc_mirc_perm() {
   return array(
-    'usc_mirc' => array(
-      'module' => 'usc_mirc',
-      'title' => t('USC Video Content Models'),
-      'objects' => array(
-        array(
-          'pid' => 'usc:mezzanineRootCollectionCModel',
-          'label' => 'Moving Images Research Collections',
-          'cmodel' => 'info:fedora/islandora:collectionCModel',
-          //'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
-          'parent' => 'info:fedora/islandora:ContentModelsCollection',
-        ),
-        array(
-          'pid' => 'usc:mezzanineCollectionCModel',
-          'label' => 'Mezzanine Collection Content Model',
-          //'cmodel' => 'info:fedora/islandora:collectionCModel',
-          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
-          'parent' => 'info:fedora/islandora:ContentModelsCollection',
-          'datastreams' => array(
-            array(
-              'dsid' => 'ISLANDORACM',
-              'label' => 'Islandora content model',
-              'datastream_file' => "./$mod_path/cmodels/mezzanineCollection/ISLANDORACM.xml",
-              'dsversion' => TRUE,
-            ),
-          ),
-        ),
-        array(
-          'pid' => variable_get('usc_mirc_mezzanine_collection', 'usc:mirc'),
-          'label' => 'Moving Images Research Collections',
-          //'cmodel' => 'info:fedora/usc:mezzanineRootCollectionCModel',
-          'cmodel' => 'info:fedora/islandora:collectionCModel',
-          'parent' => 'islandora:root',
-          'datastreams' => array(
-            array(
-              'dsid' => 'COLLECTION_POLICY',
-              'label' => 'Islandora Collection Policy',
-              'datastream_file' => "./$mod_path/collections/mezz_top/COLLECTION_POLICY.xml",
-              'dsversion' => TRUE,
-            ),
-            array(
-              'dsid' => 'TN',
-              'label' => 'Thumbnail',
-              'datastream_file' => './' . drupal_get_path('module', 'fedora_repository') . '/images/Crystal_Clear_filesystem_folder_grey.png',
-              'mimetype' => 'image/png',
-            ),
-          ),
-        ),
-        array(
-          'pid' => 'usc:preservation_masters',
-          'label' => 'MIRC Preservation Master Collection',
-          'cmodel' => 'info:fedora/islandora:collectionCModel',
-          'parent' => 'islandora:root',
-          'datastreams' => array(
-            array(
-              'dsid' => 'COLLECTION_POLICY',
-              'label' => 'Islandora Collection Policy',
-              'datastream_file' => "./$mod_path/collections/preservation_masters/COLLECTION_POLICY.xml",
-              'dsversion' => TRUE,
-            ),
-            array(
-              'dsid' => 'TN',
-              'label' => 'Thumbnail',
-              'datastream_file' => './' . drupal_get_path('module', 'fedora_repository') . '/images/Crystal_Clear_filesystem_folder_grey.png',
-              'mimetype' => 'image/png',
-            ),
-          ),
-        ),
-        array(
-          'pid' => variable_get('usc_mirc_cmodel_vro', 'usc:test-vro'),
-          'label' => 'USC Video Resource Object Content Model',
-          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
-          'parent' => 'info:fedora/islandora:ContentModelsCollection',
-          'datastreams' => array(
-            array(
-              'dsid' => 'ISLANDORACM',
-              'label' => 'Islandora content model',
-              'datastream_file' => "./$mod_path/cmodels/vro/ISLANDORACM.xml",
-              'dsversion' => TRUE,
-            ),
-          ),
-        ),
-        array(
-          'pid' => variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'),
-          'label' => 'USC Mezzanine Object Content Model',
-          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
-          'parent' => 'info:fedora/islandora:ContentModelsCollection',
-          'datastreams' => array(
-            array(
-              'dsid' => 'ISLANDORACM',
-              'label' => 'Islandora content model',
-              'datastream_file' => "./$mod_path/cmodels/mezzanine/ISLANDORACM.xml",
-              'dsversion' => TRUE,
-            ),
-          ),
-        ),
-        array(
-          'pid' => variable_get('usc_mirc_cmodel_access', 'usc:test-access'),
-          'label' => 'USC Access Object Content Model',
-          'cmodel' => 'info:fedora/fedora-system:ContentModel-3.0',
-          'parent' => 'info:fedora/islandora:ContentModelsCollection',
-          'datastreams' => array(
-            array(
-              'dsid' => 'ISLANDORACM',
-              'label' => 'Islandora content model',
-              'datastream_file' => "./$mod_path/cmodels/access/ISLANDORACM.xml",
-              'dsversion' => TRUE,
-            ),
-          ),
-        ),
-      ),
-    )
+    'access mezzanines'
   );
 }

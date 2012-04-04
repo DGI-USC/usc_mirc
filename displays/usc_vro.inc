@@ -95,4 +95,8 @@ EOQ
     
     return $tabset;
   }
+  
+  protected function _addDerivativeTab($model) {
+    return _usc_mirc_get_unrendered_form('usc_mirc_add_mezzanine_form', $this->pid);
+  }
 }
