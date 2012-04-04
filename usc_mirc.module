@@ -376,7 +376,7 @@ function usc_mirc_add_mezzanine_form(&$form_state, $parent_pid) {
       '#type' => 'textfield',
       '#title' => t('Mezzanine file path'),
       '#description' => t('Used to extract technical metadata.'),
-      //'#autocomplete_path' => 'usc/mezzanine_autocomplete', //TODO:  Implement mezzanine autocomplete
+      '#autocomplete_path' => 'usc/mezzanine_autocomplete', //TODO:  Implement mezzanine autocomplete
     ),
     'derivative_type' => array(
       '#type' => 'select',
