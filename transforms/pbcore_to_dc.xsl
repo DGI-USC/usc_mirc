@@ -25,10 +25,10 @@
       <xsl:apply-templates/>
     </xsl:template>
     
-    <xsl:template match="pb:pbcoreIdentifier[normalize-space(text())] | pb:instantiationIdentifier[not(@source='instantiation_title')][normalize-space(text())]">
+    <xsl:template match="pb:pbcoreIdentifier[normalize-space(text())] | pb:instantiationIdentifier[not(@source='instantiation_title') and normalize-space(text())]">
         <dc:identifier><xsl:value-of select="normalize-space(text())"/></dc:identifier>
     </xsl:template>
-    <xsl:template match="pb:pbcoreTitle[@titleType='Main'][normalize-space(text())] | pb:instantiationIdentifier[@source='instantiation_title'][normalize-space(text())]">
+    <xsl:template match="pb:pbcoreTitle[@titleType='Main' and normalize-space(text())] | pb:instantiationIdentifier[@source='instantiation_title'][normalize-space(text())]">
         <dc:title>
             <xsl:value-of select="normalize-space(text())"/>
         </dc:title>

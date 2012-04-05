@@ -1,6 +1,25 @@
 <?php
 
 /**
+ * autocomplete callback used to obtain streaming URLs.
+ */
+function usc_mirc_autocomplete_video_url($url_base, $filesystem_base, $string) {
+  module_load_include('inc', 'usc_mirc', 'usc_mirc.autocomplete');
+  $videos = _usc_mirc_traverse_directory(
+    $url_base,  //variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu'),
+    $filesystem_base //variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access')
+  );
+  $videos = array_filter($videos, '_usc_mirc_is_video_filename');
+  
+  ksort($videos);
+  //drupal_json($videos); //Calling Drupal function breaks on unicode stuff...  Go figure?  Due to way this file is included?
+  header('Content-Type: text/javascript; charset=utf-8');
+  echo json_encode($videos);
+
+  return;
+}
+
+/**
  *  implementation of islandora_content_model_forms' hook_islandora_content_model_forms_get_transforms()
  */
 function usc_mirc_islandora_content_model_forms_get_transforms() {
@@ -339,7 +358,7 @@ function usc_mirc_menu() {
         variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access'),         //Filesystem base
         2,                                                                          //String
       ),
-      'file' => 'usc_mirc.autocomplete.inc',
+      //'file' => 'usc_mirc.autocomplete.inc',
       'access arguments' => array('ingest new fedora objects'),
       'type' => MENU_CALLBACK,
     ),
@@ -350,7 +369,7 @@ function usc_mirc_menu() {
         variable_get('usc_mirc_mezzanine_folder', '/mnt/mirc/mezz/mezzanine'),      //Filesystem base
         2,                                                                          //String
       ),
-      'file' => 'usc_mirc.autocomplete.inc',
+      //'file' => 'usc_mirc.autocomplete.inc',
       'access arguments' => array('ingest new fedora objects'),
       'type' => MENU_CALLBACK,
     ),
@@ -376,7 +395,7 @@ function usc_mirc_add_mezzanine_form(&$form_state, $parent_pid) {
       '#type' => 'textfield',
       '#title' => t('Mezzanine file path'),
       '#description' => t('Used to extract technical metadata.'),
-      '#autocomplete_path' => 'usc/mezzanine_autocomplete', //TODO:  Implement mezzanine autocomplete
+      '#autocomplete_path' => 'usc/mezzanine_autocomplete',
     ),
     'derivative_type' => array(
       '#type' => 'select',
@@ -385,16 +404,20 @@ function usc_mirc_add_mezzanine_form(&$form_state, $parent_pid) {
       '#options' => array( //TODO:  Built list programatically...  Allow user configurable values (changable in admin form?)
         'original' => t('Original'),
         'edited' => t('Edited'),
-        'featured' => t('Featured'),
+        //'featured' => t('Featured'),
       ),
     ),
     'derivative_format' => array(
       '#type' => 'select',
       '#title' => t('Frame format'),
       '#options' => array(
-        'full_frame' => t('Full Frame (including perfs)'),
+        'edge-to-edge' => t('Edge-to-edge/Full Frame (including perfs)'),
         'cropped' => t('Cropped'),
       ),
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => 'Submit',
     ),
   );
 }
@@ -410,6 +433,21 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
   }
 }
 
+function _usc_mirc_get_title($pid) {
+  module_load_include('inc', 'usc_mirc', 'displays/base_cmodel');
+  
+  $results = BaseContentModel::_perform_sparql_query(<<<EOQ
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+SELECT ?title
+WHERE {
+  <info:fedora/$pid> dc:title ?title .
+}
+EOQ
+);
+  return $results[0]['title'];
+}
+
 function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
   global $user;
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
@@ -419,7 +457,13 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
   //1. Check that the mezzanine file exists. (done in validate method)
   //2. Grab media info output for the given file...
   $command = 'mediainfo --Full --Output=XML ' . escapeshellarg($values['file_name']);
-  $mediainfo_output = system(escapeshellcommand($command));
+  $return = -1;
+  $mediainfo_output = system(escapeshellcommand($command), $return);
+  
+  if ($return !== 0) {
+    form_set_error('file_name', 'Error extracting metadata with Mediainfo!');
+    return;
+  }
   $mediainfo_doc = DOMDocument::loadXML($mediainfo_output);
   
   //3. Transform the mediainfo file to pbcore
@@ -427,11 +471,28 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
   $transformer = new XSLTProcessor();
   $transformer->importStyleSheet($pbcore_transform);
   
-  $pbcore_doc = $transformer->transformToDoc($mediainfo_doc);
+  $pbcore_xpath = new DOMXPath($transformer->transformToDoc($mediainfo_doc));
+  $pbcore_doc = $pbcore_xpath->document;
   unset($mediainfo_doc); //No longer need this (have the transformed version), free it up.
   
-  //4. Add the type and format fields
+  
+  //4. Add the title, type and format fields
   //TODO:  Actually add the extra info.
+  $title =  _usc_mirc_get_title($values['parent_pid']);
+  $title .= ' (' . $values['derivative_format'] . ', ' . $values['derivative_type'] . ')';
+  
+  $title_el = $pbcore_doc->createElement('instantiationIdentifier', $title);
+  $title_el->setAttribute('source', 'instantiation_title');
+  
+  $format_el = $pbcore_xpath->query('/pb:pbcoreInstantiationDocument/pb:instantiationEssenceTrack[pb:essenceTrackType="Video"]/pb:essenceTrackFrameSize')->item(0);
+  $format_el->setAttribute('annotation', $values['derivative_format']);
+  
+  $type_el = $pbcore_doc->createElement('instantiationGenerations', $values['derivative_type']);
+  
+  $doc_el = $pbcore_doc->documentElement;
+  $doc_el->appendChild($title_el);
+  $doc_el->appendChild($type_el);
+  
   $pbcore = $pbcore_doc->saveXML();
   
   //5. Create DC transformation of PBCore.
@@ -444,14 +505,17 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
   //6. If we've properly created the metadata, create the Fedora Object
   $pid_namespace = variable_get('usc_mirc_namespace', 'usc');
   $pid = Fedora_Item::get_next_PID_in_namespace($pid_namespace);
-  //TODO:  Get the title somehow.
-  $new_item = Fedora_Item::ingest_new_item($pid, 'A', $values['title'], $user->name);
+
+  $new_item = Fedora_Item::ingest_new_item($pid, 'A', $title, $user->name);
   
   //7. Relate the new object to it's parent
   $new_item->add_relationship(variable_get('usc_mirc_relationship', 'isDerivativeOf'), $values['parent_pid']);
   //8. Relate to the CModel.
   $new_item->add_relationship('fedora-model:hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'));
+  
   //9. Add the derived metadata.
+  $new_item->add_datastream_from_string($pbcore, 'PBCORE', 'PBCore Instantiation info', 'text/xml', 'Created via Islandora API');
+  $new_item->modify_datastream($dc, 'DC', 'Dublin Core Metadata', 'text/xml');
 }
 
 /**
