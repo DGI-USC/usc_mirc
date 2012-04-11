@@ -2,10 +2,12 @@
 
 abstract class BaseContentModel {
   protected $pid;
+  protected $item;
   
   public function __construct($pid) {
     module_load_include('inc', 'fedora_repository', 'api/fedora_item');
     $this->pid = $pid;
+    $this->item = new Fedora_Item($pid);
   }
   
   /**

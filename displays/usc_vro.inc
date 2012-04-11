@@ -5,9 +5,10 @@ module_load_include('inc', 'usc_mirc', 'displays/base_video_display');
 class IslandoraVRO extends BaseVideoDisplay {
   protected function _getPBCore() {
     //Get the PBCore from this object.
-    $url = url(variable_get('fedora_base_url', 'http://localhost:8080/fedora') . "/objects/{$this->pid}/datastreams/PBCORE/content");
-    self::_user_agent_hack();
-    return DOMDocument::load($url);
+    //$url = url(variable_get('fedora_base_url', 'http://localhost:8080/fedora') . "/objects/{$this->pid}/datastreams/PBCORE/content");
+    //self::_user_agent_hack();
+    //return DOMDocument::load($url);
+    return DOMDocument::loadXML($this->item->get_datastream_dissemination('PBCORE'));
   }
 
   public function showFieldSets() {

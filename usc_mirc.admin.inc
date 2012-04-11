@@ -55,7 +55,7 @@ function usc_mirc_admin_form(&$form_state) {
           '#weight' => $i++,
           '#title' => t('Mezzanine base URL'),
           '#description' => t('URL (possibly with port and path), without a terminiating slash. (Used during mezzanine autocompletion)'),
-          '#default_value' => variable_get('usc_mirc_mezzanine_url', 'file:///mnt/mirc/mezz/mezzanine'),
+          '#default_value' => variable_get('usc_mirc_mezzanine_url', '/mnt/mirc/mezz/mezzanine'),
         ),
         'usc_mirc_mezzanine_folder' => array(
           '#type' => 'textfield',

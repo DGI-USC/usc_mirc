@@ -1,8 +1,8 @@
 <collection_policy xmlns="http://www.islandora.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.islandora.ca http://syn.lib.umanitoba.ca/collection_policy.xsd"
   name="Top Mezzanine Collection"
-  version="1">
+  version="2">
   <content_models>
-    <content_model dsid="ISLANDORACM" name="Mezzanine Collection ~ usc:mezzanineCollectionCModel" namespace="usc-test:" pid="usc:mezzanineCollectionCModel"></content_model>
+    <content_model dsid="ISLANDORACM" name="Video Collection ~ usc:collectionCModel" namespace="usc-test:" pid="usc:collectionCModel"></content_model>
   </content_models>
   <search_terms></search_terms>
   <staging_area></staging_area>

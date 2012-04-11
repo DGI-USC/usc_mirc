@@ -1,0 +1,29 @@
+<pbcoreInstantiationDocument xmlns="http://www.pbcore.org/PBCore/PBCoreNamespace.html">
+  <instantiationIdentifier source="filename">/mnt/mirc/mezz/mezzanine/4-328_810kbps.m4v</instantiationIdentifier>
+  <instantiationStandard source="container">MPEG-4</instantiationStandard>
+  <instantiationDigital>video/mp4</instantiationDigital>
+  <instantiationFileSize unitsOfMeasure="bytes">45987360</instantiationFileSize>
+  <instantiationDuration>00:07:31.520</instantiationDuration>
+  <instantiationDataRate>814801</instantiationDataRate>
+  <instantiationDate dateType="created">UTC 2012-04-09 15:25:56</instantiationDate>
+  <instantiationEssenceTrack>
+    <essenceTrackType>Video</essenceTrackType>
+    <essenceTrackEncoding>AVC</essenceTrackEncoding>
+    <essenceTrackDataRate unitsOfMeasure="bits per second">685000</essenceTrackDataRate>
+    <essenceTrackFrameSize annotation="cropped">480x360</essenceTrackFrameSize>
+    <essenceTrackAspectRatio>4:3</essenceTrackAspectRatio>
+    <essenceTrackFrameRate unitsOfMeasure="frames per second">30.000</essenceTrackFrameRate>
+    <essenceTrackBitDepth>8</essenceTrackBitDepth>
+    <essenceTrackAnnotation annotationType="stream_size_in_bytes">38619668</essenceTrackAnnotation>
+  </instantiationEssenceTrack>
+  <instantiationEssenceTrack>
+    <essenceTrackType>Audio</essenceTrackType>
+    <essenceTrackEncoding>AAC</essenceTrackEncoding>
+    <essenceTrackDataRate unitsOfMeasure="bits per second">126264</essenceTrackDataRate>
+    <essenceTrackSamplingRate>48000</essenceTrackSamplingRate>
+    <essenceTrackAnnotation annotationType="stream_size_in_bytes">7084240</essenceTrackAnnotation>
+    <essenceTrackLanguage>English</essenceTrackLanguage>
+  </instantiationEssenceTrack>
+  <instantiationAnnotation annotationType="instantiation_title">A stub of something (cropped, edited)</instantiationAnnotation>
+  <instantiationGenerations>edited</instantiationGenerations>
+</pbcoreInstantiationDocument>

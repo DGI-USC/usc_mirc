@@ -127,6 +127,12 @@
     </essenceTrackFrameRate>
   </xsl:template>
   
+  <xsl:template match="Width[position()=1 and not(../Original_width)]" mode="essence">
+    <essenceTrackFrameSize>
+      <xsl:value-of select="normalize-space(concat(text(), 'x', ../Height[1]/text()))"/>
+    </essenceTrackFrameSize>
+  </xsl:template>
+  
   <xsl:template match="Original_width[1]" mode="essence">
     <essenceTrackFrameSize>
       <xsl:value-of select="normalize-space(concat(text(), 'x', ../Original_height[1]/text()))"/>
