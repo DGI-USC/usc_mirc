@@ -43,6 +43,20 @@ class IslandoraVideoCollection extends BaseContentModel {
         'content' => _usc_mirc_get_unrendered_form('fedora_repository_ingest_form', $this->pid, 'collection', variable_get('usc_mirc_cmodel_vro', 'usc:test-vro')),
       );
     }
+    
+    if (user_access('edit fedora meta data')) {
+      $form = _usc_mirc_get_unrendered_form('fedora_repository_edit_qdc_form', $this->pid, 'MODS');
+    
+      $tabset['edit_metadata'] = array(
+        '#type' => 'tabpage',
+        '#title' => t('Edit Collection Metadata'),
+        //'#selected' => $showEdit,
+        'content' => $form,
+        //'#content' => $form,
+        '#weight' => $i++,
+        '#tab_name' => 'edit-metadata'
+      );
+    }
 
     return $tabset;
   }
@@ -83,11 +97,11 @@ class IslandoraVideoCollection extends BaseContentModel {
     return array(
       '#type' => 'fieldset',
       '#title' => t('Collection Metadata'),
-      '#value' => 'TODO: Render MODS here...',
+      //'#value' => 'TODO: Render MODS here...',
       '#prefix' => '<div>',
       '#suffix' => '</div>',
       '#weight' => $weight++,
-      //'content' => _usc_mirc_get_unrendered_form('', $mods);
+      'content' => _usc_mirc_get_unrendered_form('Collection Desc Display', $mods),
     );
   }
   
@@ -157,29 +171,6 @@ EOQ
     
     //Default...
     return array('usc:mirc', 'TN');
-    
-    //If no image is found, recursively look in the parent.
-    /*  This probably isn't necessary...  Neat idea, though.
-    foreach (self::_perform_sparql_query(<<<EOQ
-PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
-PREFIX fm: <info:fedora/fedora-system:def/model#>
-SELECT ?pid
-WHERE {
-  {
-    <info:fedora/$pid> fre:$collection_relation ?pid .
-  }
-  UNION
-  {
-    <info:fedora/$pid> fre:$derivative_relation ?pid .
-  }
-  ?pid fm:state fm:Active .
-}
-EOQ
-    ) as $item) {
-      if($result = self::_get_image($item['pid'])) {
-        return $result;
-      }
-    }*/
   }
   
   protected static function _get_imagecache_external_markup($for_pid, $alt = '', $title = '') {
@@ -187,6 +178,7 @@ EOQ
     $image = NULL;
     $fedora_base = variable_get('fedora_base_url', 'http://localhost:8080/fedora');
     $image_path = NULL;
+    
     if (empty($fedora_image)) {
       //TODO: $image gets some decent default image
     }
@@ -225,23 +217,25 @@ EOQ
     
     //1.  Draw paged list of mezzanines videos.
     foreach ($this->_get_collection_set($page) as $item) {
-      $collection['members'][$item['mezzanine']] = array(
-        '#type' => 'markup',
-        '#weight' => $weight++,
-        '#prefix' => '<li>',
-        '#suffix' => '</li>',
-        'image' => array(
+      if (!(empty($item['mezzanine']) || empty($item['mezzanine_title']))) {
+        $collection['members'][$item['mezzanine']] = array(
           '#type' => 'markup',
-          //'#value' => theme('image', ),
-          '#value' => self::_get_imagecache_external_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']),
           '#weight' => $weight++,
-        ),
-        'title_link' => array(
-          '#type' => 'markup',
-          '#value' => l($item['mezzanine_title'], "fedora/repository/{$item['mezzanine']}"),
-          '#weight' => $weight++,
-        ),
-      );
+          '#prefix' => '<li>',
+          '#suffix' => '</li>',
+          'image' => array(
+            '#type' => 'markup',
+            //'#value' => theme('image', ),
+            '#value' => self::_get_imagecache_external_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']),
+            '#weight' => $weight++,
+          ),
+          'title_link' => array(
+            '#type' => 'markup',
+            '#value' => l($item['mezzanine_title'], "fedora/repository/{$item['mezzanine']}"),
+            '#weight' => $weight++,
+          ),
+        );
+      }
     }
     
     if (count(element_children($collection['members'])) === 0) {
@@ -251,7 +245,6 @@ EOQ
       );
     }
     
-    unset($collection[NULL]);
     $collection['pager'] = array(
       '#type' => 'markup',
       '#value' => theme('pager'),

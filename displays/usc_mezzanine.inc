@@ -3,6 +3,66 @@
 module_load_include('inc', 'usc_mirc', 'displays/base_video_display');
 
 class IslandoraMezz extends BaseVideoDisplay {
+  public function __construct($pid) {
+    parent::__construct($pid);
+    drupal_set_breadcrumb($this->_build_breadcrumbs());
+  }
+  
+  private function _build_breadcrumbs($pid = NULL) {
+    static $breadcrumbs = array();
+    
+    if ($pid === NULL) {
+      $pid = $this->pid;
+    }
+    
+    if (count($breadcrumbs) > 10) { //XXX: Kind of an arbitrary limit, to break loops...
+      $breadcrumbs = array(t('Object loop?  Broke early.'));
+    }
+    else {
+      array_unshift($breadcrumbs, l(_usc_mirc_get_title($pid), "fedora/repository/$pid"));
+      
+      if (strcmp($pid, variable_get('fedora_repository_pid', 'islandora:root')) === 0) {
+        array_unshift($breadcrumbs, l(t('Home'), '<front>'));
+      } 
+      else {
+        $results = self::_perform_sparql_query(<<<EOQ
+PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+PREFIX fm: <info:fedora/fedora-system:def/model#>
+SELECT ?parent
+WHERE {
+  {
+    ?this fre:isDerivativeOf ?vro ;
+          fm:hasModel <info:fedora/usc:test-mezzanine> ;
+          fm:state fm:Active .
+    ?vro fre:isMemberOfCollection ?parent ;
+         fm:hasModel <info:fedora/usc:test-vro> ;
+         fm:state fm:Active .
+  }
+  UNION
+  {
+    ?this fre:isMemberOfCollection ?parent ;
+          fm:hasModel ?model ;
+          fm:state fm:Active .
+    FILTER(!sameterm(?model, <info:fedora/usc:test-vro>)) .
+  }
+  FILTER(sameterm(?this, <info:fedora/$pid>))
+}
+EOQ
+);
+        if (count($results) > 0) {
+          return $this->_build_breadcrumbs($results[0]['parent']);
+        }
+        else {
+          $breadcrumbs = array(t('Object chain broken; cannot navigate up the tree to the root collection object.'));
+        }
+      }
+    }
+    
+    $temp = $breadcrumbs;
+    $breadcrumbs = array();
+    return $temp;
+  }
+
   protected function _getPBCore() { //Get the PBCore from the parent.
     //Get the PBCore from the parent object. (VRO)?
     if(count($results = self::_perform_sparql_query(<<<EOQ
@@ -122,6 +182,7 @@ EOQ
         '#weight' => $i++
       );
     
+      /*
       //Allow migration of mezzanines to their proper collection
       $d_form = _usc_mirc_get_unrendered_form('usc_mirc_switch_mezzanine_collection_form', $this->pid);
       //dsm($d_form);
@@ -132,6 +193,7 @@ EOQ
         'content' => $d_form,
         '#weight' => $i++
       );
+      */
     }
     
     return $tabset;

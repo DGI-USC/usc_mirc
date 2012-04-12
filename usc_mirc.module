@@ -452,7 +452,6 @@ function usc_mirc_menu() {
         variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access'),         //Filesystem base
         2,                                                                          //String
       ),
-      //'file' => 'usc_mirc.autocomplete.inc',
       'access arguments' => array('ingest new fedora objects'),
       'type' => MENU_CALLBACK,
     ),
@@ -463,7 +462,6 @@ function usc_mirc_menu() {
         variable_get('usc_mirc_mezzanine_folder', '/mnt/mirc/mezz/mezzanine'),      //Filesystem base
         2,                                                                          //String
       ),
-      //'file' => 'usc_mirc.autocomplete.inc',
       'access arguments' => array('ingest new fedora objects'),
       'type' => MENU_CALLBACK,
     ),
@@ -709,7 +707,7 @@ function usc_mirc_switch_mezzanine_collection_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   
   $item = new Fedora_Item($values['object_pid']);
-  $item->purge_relationship('fedora:isMemberOfCollection', '');
+  $item->purge_relationships('isMemberOfCollection', '');
   
   if (!empty($values['collection'])) {
     $item->add_relationship('isMemberOfCollection', $values['collection']);
