@@ -196,7 +196,7 @@ EOQ
     }
     
     if ($image) {
-      return theme('image', $image, $alt, $title);
+      return theme('image', $image, $alt, $title, array(), FALSE);
     }
     else {
       return 'Makey image worky.';
