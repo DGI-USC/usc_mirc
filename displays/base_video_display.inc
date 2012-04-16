@@ -288,7 +288,7 @@ $(function() {
   $('.$player_class').flowplayer("/$mod_path/lib/flowplayer/flowplayer.commercial-3.2.8.swf", {
 
     //Product key (for sc.edu)
-    key: "#$60fe88f4c446bc34a1c",
+    key: "#\$60fe88f4c446bc34a1c",
     
     clip: {
       provider: 'lighttpd', // configure clip to use "lighthttpd" plugin for providing video data
@@ -310,7 +310,7 @@ $(function() {
 EOJS
 , 'inline');
 
-    $i = 0;
+    $i = -100;
     $output =  array(
       '#type' => 'fieldset',
       '#title' => t('Player'),
@@ -318,7 +318,7 @@ EOJS
         'class' => 'usc-mirc-player',
         'style' => 'float: left'
       ),
-      '#weight' => -1,
+      '#weight' => $i++,
     );
     if (count($videos) > 0) {
       $output['player'] = array(
@@ -330,8 +330,10 @@ EOJS
         //'#suffix' => '</a>',
         '#value' => l(theme('image', "$mod_path/images/playbuttonblack.jpg", 'Video placeholder'), $videos[0], array(
           'html' => TRUE,
-          'class' => $player_class,
-          'style' => 'display: block; width: 480px; height: 360px', //XXX:  Should probably be done via a style sheet...
+          'attributes' => array(
+            'class' => $player_class,
+            'style' => 'display: block; width: 480px; height: 360px', //XXX:  Should probably be done via a style sheet...
+          ),
         )), 
         '#weight' => $i++,
       );

@@ -141,6 +141,7 @@ EOQ
       );
     }
     
+    /* Nothing to edit...
     if (user_access('edit fedora meta data')) {
       //$form = drupal_get_form('fedora_repository_edit_qdc_form', $this->pid, 'PBCORE');
       $form = _usc_mirc_get_unrendered_form('fedora_repository_edit_qdc_form', $this->pid, 'PBCORE');
@@ -155,6 +156,7 @@ EOQ
         '#tab_name' => 'edit_metadata'
       );
     }
+    */
     
     //2. Perform a query to get the list of all access copies of the current mezzanine.  If none, don't draw the tab.
     if (user_access('view detailed list of content')) {

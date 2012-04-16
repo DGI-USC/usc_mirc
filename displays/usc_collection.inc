@@ -3,9 +3,40 @@
 module_load_include('inc', 'usc_mirc', 'displays/base_cmodel');
 
 class IslandoraVideoCollection extends BaseContentModel {
-  /*public function __construct($pid) {
+  protected $pager_name;
+  protected $per_page;
+  public function __construct($pid) {
     parent::__construct($pid);
-  }*/
+    $this->pager_name = 0;
+    $this->per_page = 20;
+    //$this->_fix_old_mezzanines();
+  }
+  
+  public function _fix_old_mezzanines() {
+    $collection_relation = 'isMemberOfCollection';
+    
+    $results = self::_perform_sparql_query(<<<EOQ
+PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+PREFIX fm: <info:fedora/fedora-system:def/model#>
+SELECT ?collection ?mezz ?vro
+WHERE {
+  ?mezz fm:hasModel <info:fedora/usc:test-mezzanine> ;
+        fre:$collection_relation ?collection ;
+        fre:isDerivativeOf ?vro .
+}
+EOQ
+);
+    foreach($results as $info) {
+      $vro = new Fedora_Item($info['vro']);
+      $vro->purge_relationships($collection_relation, NULL);
+      if($vro->add_relationship($collection_relation, $info['collection'])) {
+        $mezz = new Fedora_Item($info['mezz']);
+        $mezz->purge_relationships($collection_relation, NULL);
+        Fedora_Item::forget($mezz->pid);
+      }
+      Fedora_Item::forget($vro->pid);
+    }
+  }
   
   public function showFieldSets($page = 0) {
     $tabset = array();
@@ -61,35 +92,74 @@ class IslandoraVideoCollection extends BaseContentModel {
     return $tabset;
   }
   
-  private function _preservation_master_collection_view(&$weight, $page) {
+  private function _preservation_master_collection_view(&$weight) {
     $collection = array(
-      '#type' => 'markup',
+      '#type' => 'fieldset',
+      '#title' => t('Collection Members'),
       '#weight' => $weight++,
-      '#prefix' => '<ol>',
-      '#suffix' => '</ol>',
-    );
-    //1.  Draw paged list of mezzanines videos.
-    foreach ($this->_get_collection_set($page) as $item) {
-      $collection[$item['vro']] = array(
+      'members' => array(
         '#type' => 'markup',
         '#weight' => $weight++,
-        '#prefix' => '<li>',
-        '#suffix' => '</li>',
-        'image' => array(
-          '#type' => 'markup',
-          //'#value' => theme('image', ),
-          '#value' => self::_get_imagecache_external_markup($item['vro']),
-          '#weight' => $weight++,
-        ),
-        'title_link' => array(
-          '#type' => 'markup',
-          '#value' => l($item['vro_title'], "fedora/repository/{$item['vro']}"),
-          '#weight' => $weight++,
-        ),
+      )
+    );
+    
+    //1.  Draw paged list of mezzanines videos.
+    
+    //Pager hacking...  Huzzah!
+    $pager_name = 1;
+    global $pager_total, $pager_page_array;
+    $per_page = $this->per_page;
+    $pager_total[$pager_name] = ceil($this->_get_number_of_children(FALSE) / $per_page); //TODO:  Get the total number...
+    
+    $page_info = explode(',', isset($_GET['page']) ? $_GET['page'] : '');
+    $page = $page_info[$pager_name];
+    if ($page < 0) {
+      $page = 0;
+    }
+    
+    if (!isset($pager_page_array)) {
+      $pager_page_array = pager_load_array($page, $pager_name, $page_info);
+    }
+    else {
+      $pager_page_array = pager_load_array($page, $pager_name, $pager_page_array);
+    }
+    
+    $page = $pager_page_array[$pager_name];
+    //Done with pager hacking...
+
+    
+    $i = $page * $per_page + 1;
+    $table_header = array(
+      t(''),
+      t('Thumbnail'),
+      t('Info'),
+    );
+    $table_data = array();
+    foreach ($this->_get_collection_set($page, $per_page, FALSE) as $item) {
+      $path = "fedora/repository/{$item['vro']}";
+      $table_data[] = array(
+        $i++,
+        l(self::_get_imagecache_external_markup($item['vro'], $item['vro_title'], $item['vro_title']), $path, array('html' => TRUE)),
+        l($item['vro_title'], $path),
       );
     }
     
-    return $collection; 
+    if (count($table_data) === 0) {
+      $collection['members'] = array(
+        '#type' => 'markup',
+        '#value' => t('No preservation masters in this collection.'),
+      );
+    }
+    else {
+      $collection['members']['#value'] = theme('table', $table_header, $table_data);
+      $collection['pager'] = array(
+        '#type' => 'markup',
+        '#value' => theme('pager', array(), $per_page, $pager_name),
+        '#weight' => $weight++,
+      );
+    }
+    
+    return $collection;
   }
   
   private function _collection_info_fieldset(&$weight) {
@@ -105,37 +175,60 @@ class IslandoraVideoCollection extends BaseContentModel {
     );
   }
   
-  private function _get_collection_set($page = 0, $number = 20) {
-    static $cache = array();  //This'll occasionally be used twice per request...  Slight optimization?
-    
+  private function _get_collection_set($page = 0, $number = 20, $mezzanines = TRUE) {
     $offset = $page * $number;
-    if (empty($cache[$offset])) {
-      $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
-      $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
-      
-      $cache[$offset] = self::_perform_sparql_query(<<<EOQ
+    $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
+    $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
+    $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:test-vro');
+    $mezzanine_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine');
+    
+    $query = "
 PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
 PREFIX fm: <info:fedora/fedora-system:def/model#>
 PREFIX dc: <http://purl.org/dc/elements/1.1/>
-SELECT ?vro ?vro_title ?mezzanine ?mezzanine_title 
+SELECT ?vro " . ($mezzanines ? " ?mezzanine ?mezzanine_title" : "?vro_title") . " 
+WHERE {
+?vro fre:$collection_relation <info:fedora/{$this->pid}> ;
+     fm:hasModel <info:fedora/$vro_cmodel> ; " .
+     ((!$mezzanines) ? " dc:title ?vro_title ; " : '') . "
+     fm:state fm:Active . " . ($mezzanines ? "
+OPTIONAL{
+?mezzanine fre:$derivative_relation ?vro ;
+           fm:hasModel <info:fedora/$mezzanine_cmodel> ;
+           fm:state fm:Active ;
+           dc:title ?mezzanine_title .
+}" : '') . "
+}
+ORDER BY " . ($mezzanines? "?mezzanine_title" : "?vro_title") . "
+LIMIT $number
+OFFSET $offset";
+    //dsm($query, 'Query');
+    //dsm($mezzanines, 'Mezz?');
+    return self::_perform_sparql_query($query);
+  }
+  
+  protected function _get_number_of_children($mezzanines = TRUE) {
+    $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
+    $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
+    $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:test-vro');
+    $mezzanine_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine');
+      
+      
+    $results = self::_perform_sparql_query("
+PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+PREFIX fm: <info:fedora/fedora-system:def/model#>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+SELECT ?vro
 WHERE {
   ?vro fre:$collection_relation <info:fedora/{$this->pid}> ;
-       dc:title ?vro_title ;
-       fm:state fm:Active .
-  OPTIONAL{
+       fm:hasModel <info:fedora/$vro_cmodel> ;
+       fm:state fm:Active . " . ($mezzanines ? "
   ?mezzanine fre:$derivative_relation ?vro ;
-             fm:state fm:Active ;
-             dc:title ?mezzanine_title .
-  }
-}
-ORDER BY ?mezzanine_title
-LIMIT $number
-OFFSET $offset
-EOQ
-);
-    }
-    
-    return $cache[$offset];  
+             fm:hasModel <info:fedora/$mezzanine_cmodel> ;
+             fm:state fm:Active . " : '') . "
+}");
+
+    return count($results);
   }
   
   /**
@@ -203,53 +296,74 @@ EOQ
     }
   }
   
-  private function _collection_view(&$weight, $page = 0) {
+  private function _collection_view(&$weight) {
     $collection = array(
       '#type' => 'fieldset',
       '#title' => t('Collection Members'),
       '#weight' => $weight++,
       'members' => array(
         '#type' => 'markup',
-        '#prefix' => '<ol>',
-        '#suffix' => '</ol>',
+        '#weight' => $weight++,
       )
     );
     
     //1.  Draw paged list of mezzanines videos.
-    foreach ($this->_get_collection_set($page) as $item) {
+    
+    //Pager hacking...  Huzzah!
+    $pager_name = 0;
+    global $pager_total, $pager_page_array;
+    $per_page = $this->per_page;
+    $pager_total[$pager_name] = ceil($this->_get_number_of_children() / $per_page); //TODO:  Get the total number...
+    
+    $page_info = explode(',', isset($_GET['page']) ? $_GET['page'] : '');
+    $page = $page_info[$pager_name];
+    if ($page < 0) {
+      $page = 0;
+    }
+    
+    if (!isset($pager_page_array)) {
+      $pager_page_array = pager_load_array($page, $pager_name, $page_info);
+    }
+    else {
+      $pager_page_array = pager_load_array($page, $pager_name, $pager_page_array);
+    }
+    
+    $page = $pager_page_array[$pager_name];
+    //Done with pager hacking...
+
+    
+    $i = $page * $per_page + 1;
+    $table_header = array(
+      t(''),
+      t('Thumbnail'),
+      t('Info'),
+    );
+    $table_data = array();
+    foreach ($this->_get_collection_set($page, $per_page) as $item) {
       if (!(empty($item['mezzanine']) || empty($item['mezzanine_title']))) {
-        $collection['members'][$item['mezzanine']] = array(
-          '#type' => 'markup',
-          '#weight' => $weight++,
-          '#prefix' => '<li>',
-          '#suffix' => '</li>',
-          'image' => array(
-            '#type' => 'markup',
-            //'#value' => theme('image', ),
-            '#value' => self::_get_imagecache_external_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']),
-            '#weight' => $weight++,
-          ),
-          'title_link' => array(
-            '#type' => 'markup',
-            '#value' => l($item['mezzanine_title'], "fedora/repository/{$item['mezzanine']}"),
-            '#weight' => $weight++,
-          ),
+        $path = "fedora/repository/{$item['mezzanine']}";
+        $table_data[] = array(
+          $i++,
+          l(self::_get_imagecache_external_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE)),
+          l($item['mezzanine_title'], $path),
         );
       }
     }
     
-    if (count(element_children($collection['members'])) === 0) {
+    if (count($table_data) === 0) {
       $collection['members'] = array(
         '#type' => 'markup',
         '#value' => t('No public video information in this collection, yet.'),
       );
     }
-    
-    $collection['pager'] = array(
-      '#type' => 'markup',
-      '#value' => theme('pager'),
-      '#weight' => $weight++,
-    );
+    else {
+      $collection['members']['#value'] = theme('table', $table_header, $table_data);
+      $collection['pager'] = array(
+        '#type' => 'markup',
+        '#value' => theme('pager', array(), $per_page, $pager_name),
+        '#weight' => $weight++,
+      );
+    }
     
     return $collection;
   }

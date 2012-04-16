@@ -20,10 +20,10 @@ class USC_Results extends IslandoraSolrResults {
       $output['class'] = $classes;
       //$output = "<div class='usc-mirc-solr-result $classes'>";
       
-      $title = 'dc.title';
+      $title = 'pb_title_Main_ms';
       $title = (array)$doc->$title;
       $title = $title[0];
-      $desc = 'pb.abstract';
+      $desc = 'pb_description_custom_ms';
       $desc = (array)$doc->$desc;
       $desc = $desc[0];
       
