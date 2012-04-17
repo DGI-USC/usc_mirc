@@ -63,8 +63,15 @@ EOQ
     return $temp;
   }
 
-  protected function _getPBCore() { //Get the PBCore from the parent.
-    //Get the PBCore from the parent object. (VRO)?
+  /**
+   * Get the PID from which this one was derived.
+   *
+   * @return mixed
+   *   Either the string containing the (first) object from which this was derived, or boolean false if none was found.
+   */
+  protected function _get_parent() {
+    $vro_cmodel = 'usc:test-vro';
+    
     if(count($results = self::_perform_sparql_query(<<<EOQ
 PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
 PREFIX fm: <info:fedora/fedora-system:def/model#>
@@ -72,21 +79,23 @@ SELECT ?object
 WHERE {
   ?subject fre:{$this->def_rel} ?object ;
            fm:state fm:Active .
-  ?object fm:state fm:Active .
+  ?object fm:state fm:Active ;
+          fm:hasModel <info:fedora/$vro_cmodel> .
   FILTER(sameTerm(?subject, <info:fedora/{$this->pid}>)) .
 }
 EOQ
 )) > 0) {
-      $pid = $results[0]['object'];
-      
-      $item = new Fedora_Item($this->pid);
-      
+      return $results[0]['object'];
+    }
+    else {
+      return FALSE;
+    }
+  }
+  
+  protected function _getPBCore() { //Get the PBCore from the parent.
+    //Get the PBCore from the parent object. (VRO)?
+    if($pid = $this->_get_parent()) {
       $url = url(variable_get('fedora_base_url', 'http://localhost:8080/fedora') . "/objects/{$pid}/datastreams/PBCORE/content"); //Get from the parent by default.
-     /* 
-     //Get the PBCore from this (mezzanine) object, if it exists.
-     if (array_key_exists('PBCORE', $item->get_datastreams_list_as_array())) { //Get from the current object if it exists.
-        $url = url(variable_get('fedora_base_url', 'http://localhost:8080/fedora') . "/objects/{$this->pid}/datastreams/PBCORE/content");
-      }*/
       
       self::_user_agent_hack();
       return DOMDocument::load($url);
@@ -141,14 +150,14 @@ EOQ
       );
     }
     
-    /* Nothing to edit...
+    /* Nothing to edit...     */
     if (user_access('edit fedora meta data')) {
-      //$form = drupal_get_form('fedora_repository_edit_qdc_form', $this->pid, 'PBCORE');
-      $form = _usc_mirc_get_unrendered_form('fedora_repository_edit_qdc_form', $this->pid, 'PBCORE');
+      $parent = 
+      $form = _usc_mirc_get_unrendered_form('usc_mirc_add_mezzanine_form', $this->_get_parent(), $this->pid);
     
       $tabset['edit_metadata'] = array(
         '#type' => 'tabpage',
-        '#title' => t('Edit Metadata'),
+        '#title' => t('Reinitialize Metadata'),
         //'#selected' => $showEdit,
         'content' => $form,
         //'#content' => $form,
@@ -156,7 +165,7 @@ EOQ
         '#tab_name' => 'edit_metadata'
       );
     }
-    */
+
     
     //2. Perform a query to get the list of all access copies of the current mezzanine.  If none, don't draw the tab.
     if (user_access('view detailed list of content')) {

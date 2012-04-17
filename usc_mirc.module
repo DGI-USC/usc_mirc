@@ -11,9 +11,7 @@ function usc_mirc_autocomplete_video_url($url_base, $filesystem_base, $string) {
     $filesystem_base, //variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access')
     $string
   );
-  dsm($videos);
   $videos = array_filter($videos, '_usc_mirc_is_video_filename');
-  dsm($videos);
   
   ksort($videos);
   drupal_json($videos);
@@ -477,8 +475,12 @@ function usc_mirc_menu() {
   );
 }
 
-function usc_mirc_add_mezzanine_form(&$form_state, $parent_pid) {
+function usc_mirc_add_mezzanine_form(&$form_state, $parent_pid, $update_pid = FALSE) {
   return array(
+    'update_pid' => array(
+      '#type' => 'hidden',
+      '#value' => $update_pid,
+    ),
     'parent_pid' => array(
       '#type' => 'hidden',
       '#value' => $parent_pid,
@@ -523,6 +525,102 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
       '%file_name' => $form['file_name']['#options'][$file],
     )));
   }
+  else {
+    $old_level = error_reporting(-1);
+    try {
+      //2. Grab media info output for the given file...
+      $command = 'mediainfo --Full --Output=XML ' . escapeshellarg($values['file_name']);
+      $descriptor = array(
+        1 => array('pipe', 'w'),
+      );
+      $pipes = array();
+      $command = escapeshellcmd($command);
+      $media_proc = proc_open($command, $descriptor, $pipes);
+      $mediainfo_output = '';
+      
+      if (!is_resource($media_proc)) {
+        form_set_error('file_name', t('Error extracting metadata with Mediainfo!'));
+        throw new Exception('Get outta here!');
+      }
+      else {
+        $mediainfo_output = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $return_value = proc_close($media_proc);
+      }
+      
+      $mediainfo_doc = DOMDocument::loadXML($mediainfo_output);
+      
+      if (!$mediainfo_doc) {
+        form_set_error('', t('Mediainfo output failed to parse with DOMDocument!'));
+        throw new Exception('Get outta here!');
+      }
+      
+      //3. Transform the mediainfo file to pbcore
+      $pbcore_transform = DOMDocument::load(drupal_get_path('module', 'usc_mirc') . '/transforms/mediainfo_to_pbcoreInstantiation.xsl');
+      
+      if ($pbcore_transform === FALSE) {
+        watchdog('usc_mirc', 'Failed to load transform!', array(), WATCHDOG_ERROR);
+        throw new Exception('Get outta here!');
+      }
+      $transformer = new XSLTProcessor();
+      $transformer->importStylesheet($pbcore_transform);
+      
+      
+      $intermediate_pbcore = $transformer->transformToDoc($mediainfo_doc);
+      if (!$intermediate_pbcore) {
+        form_set_error('', t('Failed transforming Mediainfo XML to PBCore!'));
+        throw new Exception('Get outta here!');
+      }
+      unset($mediainfo_doc); //No longer need this (have the transformed version), free it up.
+      
+      $pbcore_xpath = new DOMXPath($intermediate_pbcore);
+      $pbcore_doc = $pbcore_xpath->document;
+      $pbcore_xpath->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+      
+      //4. Add the title, type and format fields
+      $title =  _usc_mirc_get_title($values['parent_pid']);
+      $title .= ' (' . $values['derivative_format'] . ', ' . $values['derivative_type'] . ')';
+      $form_state['storage']['usc_mirc']['title'] = $title;
+      
+      $title_el = $pbcore_doc->createElement('instantiationAnnotation', $title);
+      $title_el->setAttribute('annotationType', 'instantiation_title');
+      
+      foreach($pbcore_xpath->query('//pb:instantiationEssenceTrack[pb:essenceTrackType/text()="Video"]/pb:essenceTrackFrameSize') as $format_el) {
+        $format_el->setAttribute('annotation', $values['derivative_format']);
+      }
+      
+      $type_el = $pbcore_doc->createElement('instantiationGenerations', $values['derivative_type']);
+      
+      $doc_el = $pbcore_doc->documentElement;
+      $doc_el->appendChild($title_el);
+      $doc_el->appendChild($type_el);
+      
+      $pbcore_doc->normalizeDocument();
+      $form_state['storage']['usc_mirc']['pbcore'] = $pbcore = $pbcore_doc->saveXML();
+      
+      //5. Create DC transformation of PBCore.
+      $dc_transform = DOMDocument::load(drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xsl');
+      if (!$dc_transform) {
+        form_set_error('', t('Failed loading PBCore to DC transform!'));
+        throw new Exception('Get outta here!');
+      }
+      $transformer = new XSLTProcessor();
+      $transformer->importStyleSheet($dc_transform);
+      
+      $pbcore_doc = DOMDocument::loadXML($pbcore); //XXX:  This seems to be necessary for some reason...  It seems to fail to get the newly added elements for the transform otherwise.  DOMDocument, y u no work!?
+      $form_state['storage']['usc_mirc']['dc'] = $dc = $transformer->transformToXML($pbcore_doc);
+      if (!$dc) {
+        form_set_error('', t('Failed transforming PBCore XML to DC!'));
+        throw new Exception('Get outta here!');
+      }
+      unset($pbcore_doc); //No longer need this (have it in a string), free it up.
+    }
+    catch (Exception $e) {
+      //Do nothing...
+    }
+    
+    error_reporting($old_level);
+  }
 }
 
 function _usc_mirc_get_title($pid) {
@@ -545,81 +643,12 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
   module_load_include('inc', 'fedora_repository', 'api/fedora_item');
   
   $values = $form_state['values'];
+  $pbcore = $form_state['storage']['usc_mirc']['pbcore'];
+  $dc = $form_state['storage']['usc_mirc']['dc'];
+  $title = $form_state['storage']['usc_mirc']['title'];
   
-  //1. Check that the mezzanine file exists. (done in validate method)
-  //2. Grab media info output for the given file...
-  $command = 'mediainfo --Full --Output=XML ' . escapeshellarg($values['file_name']);
-  $descriptor = array(
-    1 => array('pipe', 'w'),
-  );
-  $pipes = array();
-  $command = escapeshellcmd($command);
-  $media_proc = proc_open($command, $descriptor, $pipes);
-  $mediainfo_output = '';
-  if (!is_resource($media_proc)) {
-    form_set_error('file_name', t('Error extracting metadata with Mediainfo!'));
-    return;
-  }
-  else {
-    //dd($pipes, 'Pipes');
-    $mediainfo_output = stream_get_contents($pipes[1]);
-    fclose($pipes[1]);
-    $return_value = proc_close($media_proc);
-  }
-  //dd($command, 'Mediainfo command');
-  dd($mediainfo_output, 'Mediainfo output');
-  
-  if ($mediainfo_doc = DOMDocument::loadXML($mediainfo_output)) {
-    //3. Transform the mediainfo file to pbcore
-    $pbcore_transform = DOMDocument::load(drupal_get_path('module', 'usc_mirc') . '/transforms/mediainfo_to_pbcoreInstantiation.xsl');
-    
-    if ($pbcore_transform === FALSE) {
-      watchdog('usc_mirc', 'Failed to load transform!', array(), WATCHDOG_ERROR);
-      return;
-    }
-    
-    $old_level = error_reporting(-1);
-    $transformer = new XSLTProcessor();
-    $transformer->importStylesheet($pbcore_transform);
-    
-    $intermediate_pbcore = $transformer->transformToDoc($mediainfo_doc);
-    unset($mediainfo_doc); //No longer need this (have the transformed version), free it up.
-    
-    $pbcore_xpath = new DOMXPath($intermediate_pbcore);
-    $pbcore_doc = $pbcore_xpath->document;
-    $pbcore_xpath->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
-    
-    //4. Add the title, type and format fields
-    $title =  _usc_mirc_get_title($values['parent_pid']);
-    $title .= ' (' . $values['derivative_format'] . ', ' . $values['derivative_type'] . ')';
-    
-    $title_el = $pbcore_doc->createElement('instantiationAnnotation', $title);
-    $title_el->setAttribute('annotationType', 'instantiation_title');
-    
-    foreach($pbcore_xpath->query('//pb:instantiationEssenceTrack[pb:essenceTrackType/text()="Video"]/pb:essenceTrackFrameSize') as $format_el) {
-      $format_el->setAttribute('annotation', $values['derivative_format']);
-    }
-    
-    $type_el = $pbcore_doc->createElement('instantiationGenerations', $values['derivative_type']);
-    
-    $doc_el = $pbcore_doc->documentElement;
-    $doc_el->appendChild($title_el);
-    $doc_el->appendChild($type_el);
-    
-    $pbcore_doc->normalizeDocument();
-    $pbcore = $pbcore_doc->saveXML();
-    dd($pbcore, 'PBCore');
-    
-    //5. Create DC transformation of PBCore.
-    $dc_transform = DOMDocument::load(drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xsl');
-    $transformer = new XSLTProcessor();
-    $transformer->importStyleSheet($dc_transform);
-    
-    $pbcore_doc = DOMDocument::loadXML($pbcore); //XXX:  This seems to be necessary for some reason...  It seems to fail to get the newly added elements for the transform otherwise.  DOMDocument, y u no work!?
-    $dc = $transformer->transformToXML($pbcore_doc);
-    unset($pbcore_doc); //No longer need this (have it in a string), free it up.
-    
-    //6. If we've properly created the metadata, create the Fedora Object
+  //6. If we've properly created the metadata, create the Fedora Object  
+  if (!$values['update_pid']) {
     $pid_namespace = variable_get('usc_mirc_namespace', 'usc');
     $pid = Fedora_Item::get_next_PID_in_namespace($pid_namespace);
 
@@ -631,14 +660,13 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
     $new_item->add_relationship('hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'), 'info:fedora/fedora-system:def/model#');
     
     //9. Add the derived metadata.
-    $new_item->add_datastream_from_string($pbcore, 'PBCORE', 'PBCore Instantiation info', 'text/xml', 'X', 'Created via Islandora API');
+    $new_item->add_datastream_from_string($pbcore, 'PBCORE', 'PBCore Instantiation info', 'text/xml', 'X', 'Created via Islandora API'); 
     $new_item->modify_datastream($dc, 'DC', 'Dublin Core Metadata', 'text/xml');
-    
-    error_reporting($old_level);
   }
-  else {
-    form_set_error('file_name', t('Error extracting metadata with Mediainfo (Failed to load as XML)!'));
-    return;
+  elseif (($item = new Fedora_Item($values['update_pid'])) && $item->exists()) {
+    $item->modify_object($title);
+    $item->modify_datastream($pbcore, 'PBCORE', 'PBCore Instantiation info', 'text/xml');
+    $item->modify_datastream($dc, 'DC', 'Dublin Core Metadata', 'text/xml');
   }
 }
 
