@@ -152,7 +152,6 @@ EOQ
     
     /* Nothing to edit...     */
     if (user_access('edit fedora meta data')) {
-      $parent = 
       $form = _usc_mirc_get_unrendered_form('usc_mirc_add_mezzanine_form', $this->_get_parent(), $this->pid);
     
       $tabset['edit_metadata'] = array(

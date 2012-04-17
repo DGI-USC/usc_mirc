@@ -624,18 +624,9 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
 }
 
 function _usc_mirc_get_title($pid) {
-  module_load_include('inc', 'usc_mirc', 'displays/base_cmodel');
-  
-  $results = BaseContentModel::_perform_sparql_query(<<<EOQ
-PREFIX dc: <http://purl.org/dc/elements/1.1/>
-PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
-SELECT ?title
-WHERE {
-  <info:fedora/$pid> dc:title ?title .
-}
-EOQ
-);
-  return $results[0]['title'];
+  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
+  $item = new Fedora_Item($pid);
+  return $item->objectProfile->objLabel;
 }
 
 function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
