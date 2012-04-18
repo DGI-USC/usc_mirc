@@ -64,6 +64,20 @@ function usc_mirc_admin_form(&$form_state) {
           '#description' => t('Mountpoint/folder on server under which the streaming access copies are located. (Used during mezzanine  autocompletion)'),
           '#default_value' => variable_get('usc_mirc_mezzanine_folder', '/mnt/mirc/mezz/mezzanine'),
         ),
+        'usc_mirc_mezzanine_type_vocab' => array(
+          '#type' => 'textfield',
+          '#weight' => $i++,
+          '#title' => t('Type Taxonomy vocabulary'),
+          '#description' => t('A taxonomy to use for the select box in the mezzanine ingest/edit form. (There is a minimal default if it does not exist.)'),
+          '#default_value' => variable_get('usc_mirc_mezzanine_type_vocab', 'usc_mirc_mezzanine_type_vocab'),
+        ),
+        'usc_mirc_mezzanine_format_vocab' => array(
+          '#type' => 'textfield',
+          '#weight' => $i++,
+          '#title' => t('Format Taxonomy vocabulary'),
+          '#description' => t('A taxonomy to use for the select box in the mezzanine ingest/edit form. (There is a minimal default if it does not exist.)'),
+          '#default_value' => variable_get('usc_mirc_mezzanine_format_vocab', 'usc_mirc_mezzanine_format_vocab'),
+        ),
       ),
       'usc_mirc_streaming_extensions' => array(
         '#type' => 'textfield',

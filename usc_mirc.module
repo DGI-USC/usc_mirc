@@ -475,6 +475,66 @@ function usc_mirc_menu() {
   );
 }
 
+function _usc_mirc_get_mezzanine_types(&$form_state) {
+  if (module_exists('taxonomy')) {
+    $vocabs = taxonomy_get_vocabularies();
+    foreach($vocabs as $id => $voc) {
+      if ($voc->name == variable_get('usc_mirc_mezzanine_type_vocab', 'usc_mirc_mezzanine_type_vocab')) {
+        return _taxonomy_term_select(
+          t('Derivative type'),
+          NULL,
+          $form_state['values']['derivative_type'],
+          $id,
+          t('Whether this mezzanine is edited, or so on.'),
+          FALSE,
+          NULL
+        );
+      }
+    }
+  }
+  
+  return array(
+    '#type' => 'select',
+    '#title' => t('Derivative type'),
+    '#description' => t('Whether this mezzanine is edited, or so on.'),
+    '#options' => array( //TODO:  Built list programatically...  Allow user configurable values (changable in admin form?)
+      'original' => t('Original'),
+      'edited' => t('Edited'),
+      //'featured' => t('Featured'),
+    ),
+  );
+}
+
+function _usc_mirc_get_mezzanine_formats(&$form_state) {
+  if (module_exists('taxonomy')) {
+    $vocabs = taxonomy_get_vocabularies();
+    foreach($vocabs as $id => $voc) {
+      if ($voc->name == variable_get('usc_mirc_mezzanine_format_vocab', 'usc_mirc_mezzanine_format_vocab')) {
+        return _taxonomy_term_select(
+          t('Derivative format'),
+          NULL,
+          $form_state['values']['derivative_format'],
+          $id,
+          t('Whether this mezzanine is edge-to-edge, cropped, or so on.'),
+          FALSE,
+          NULL
+        );
+      }
+    }
+  }
+  
+  return array(
+    '#type' => 'select',
+    '#title' => t('Derivative format'),
+    '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on.'),
+    '#options' => array(
+      'edge-to-edge' => t('Edge-to-edge/Full frame (including perfs)'),
+      'cropped' => t('Cropped'),
+    ),
+    '#default_value' => $form_state['values']['derivative_format'],
+  );
+}
+
 function usc_mirc_add_mezzanine_form(&$form_state, $parent_pid, $update_pid = FALSE) {
   return array(
     'update_pid' => array(
@@ -490,28 +550,14 @@ function usc_mirc_add_mezzanine_form(&$form_state, $parent_pid, $update_pid = FA
       '#title' => t('Mezzanine file path'),
       '#description' => t('Used to extract technical metadata.'),
       '#autocomplete_path' => 'usc/mezzanine_autocomplete',
+      '#weight' => -20,
+      '#default_value' => $form_state['values']['file_name'],
     ),
-    'derivative_type' => array(
-      '#type' => 'select',
-      '#title' => t('Derivative type'),
-      '#description' => t('Whether this mezzanine is edited, or so on.'),
-      '#options' => array( //TODO:  Built list programatically...  Allow user configurable values (changable in admin form?)
-        'original' => t('Original'),
-        'edited' => t('Edited'),
-        //'featured' => t('Featured'),
-      ),
-    ),
-    'derivative_format' => array(
-      '#type' => 'select',
-      '#title' => t('Frame format'),
-      '#options' => array(
-        'edge-to-edge' => t('Edge-to-edge/Full Frame (including perfs)'),
-        'cropped' => t('Cropped'),
-      ),
-    ),
+    'derivative_type' => _usc_mirc_get_mezzanine_types($form_state),
+    'derivative_format' => _usc_mirc_get_mezzanine_formats($form_state),
     'submit' => array(
       '#type' => 'submit',
-      '#value' => 'Submit',
+      '#value' => t('Submit'),
     ),
   );
 }
