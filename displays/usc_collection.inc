@@ -150,6 +150,9 @@ class IslandoraVideoCollection extends BaseContentModel {
       '#prefix' => '<div>',
       '#suffix' => '</div>',
       '#weight' => $weight++,
+      '#attributes' => array(
+        'class' => 'collection-metadata',
+      ),
       'collection_image' => array(
         '#type' => 'markup',
         '#value' => self::_get_image_markup($this->pid, '', '', 'featured_content_image'),
@@ -157,6 +160,7 @@ class IslandoraVideoCollection extends BaseContentModel {
       ),
     );
     
+    //Abuse XML forms a bit to build a display...
     $form = _usc_mirc_get_unrendered_form('Collection Desc Display', $mods);
     unset($form['form_id']);
     unset($form['form_build_id']);
