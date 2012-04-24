@@ -1,5 +1,15 @@
 <?php
 
+function _usc_mirc_get_presets() {
+  $presets = array();
+  
+  foreach (imagecache_presets() as $key => $preset) {
+    $presets[$preset['presetname']] = $preset['presetname'];
+  }
+  
+  return $presets;
+}
+
 function usc_mirc_admin_form(&$form_state) {
   $i = -100;
   return system_settings_form(array(
@@ -16,6 +26,14 @@ function usc_mirc_admin_form(&$form_state) {
       '#title' => t('MIRC PID namespace'),
       '#description' => t('The namespace/prefix with which new items will be created in Fedora (where a COLLECTION_POLICY doesn\'t already dictate it).'),
       '#default_value' => variable_get('usc_mirc_namespace', 'usc'),
+    ),
+    'usc_mirc_imagecache_thumbnail_preset' => array(
+      '#type' => 'select',
+      '#weight' => $i++,
+      '#title' => t('Thumbnail Imagecache preset'),
+      '#description' => t('The preset with which thumbnails will be created.'),
+      '#default_value' => variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail'),
+      '#options' => _usc_mirc_get_presets(),
     ),
     'autocomplete' => array(
       '#type' => 'fieldset',
