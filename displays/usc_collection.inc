@@ -147,23 +147,22 @@ class IslandoraVideoCollection extends BaseContentModel {
     $to_return = array(
       '#type' => 'fieldset',
       '#title' => t('Collection Metadata'),
-      //'#value' => 'TODO: Render MODS here...',
       '#prefix' => '<div>',
       '#suffix' => '</div>',
       '#weight' => $weight++,
+      'collection_image' => array(
+        '#type' => 'markup',
+        '#value' => self::_get_image_markup($this->pid, '', '', 'featured_content_image'),
+        '#sorted' => TRUE,
+      ),
     );
     
-    $image = array(
-      '#type' => 'markup',
-      '#value' => self::_get_image_markup($this->pid, '', '', 'featured_content_image'),
-      '#sorted' => TRUE,
-    );
-    
-    foreach (_usc_mirc_get_unrendered_form('Collection Desc Display', $mods) as $key => $value) {
-      if ($key === 'title_info') {
-        $to_return['content']['collection_image'] = $image;
-      }
-      $to_return['content'][$key] = $value;
+    $form = _usc_mirc_get_unrendered_form('Collection Desc Display', $mods);
+    unset($form['form_id']);
+    unset($form['form_build_id']);
+    unset($form['form_token']);
+    foreach (element_children($form) as $key) {
+      $to_return[$key] = $form[$key];
     }
 
     return $to_return;
