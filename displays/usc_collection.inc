@@ -9,33 +9,6 @@ class IslandoraVideoCollection extends BaseContentModel {
     parent::__construct($pid);
     $this->pager_name = 0;
     $this->per_page = 20;
-    //$this->_fix_old_mezzanines();
-  }
-  
-  public function _fix_old_mezzanines() {
-    $collection_relation = 'isMemberOfCollection';
-    
-    $results = self::_perform_sparql_query(<<<EOQ
-PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
-PREFIX fm: <info:fedora/fedora-system:def/model#>
-SELECT ?collection ?mezz ?vro
-WHERE {
-  ?mezz fm:hasModel <info:fedora/usc:test-mezzanine> ;
-        fre:$collection_relation ?collection ;
-        fre:isDerivativeOf ?vro .
-}
-EOQ
-);
-    foreach($results as $info) {
-      $vro = new Fedora_Item($info['vro']);
-      $vro->purge_relationships($collection_relation, NULL);
-      if($vro->add_relationship($collection_relation, $info['collection'])) {
-        $mezz = new Fedora_Item($info['mezz']);
-        $mezz->purge_relationships($collection_relation, NULL);
-        Fedora_Item::forget($mezz->pid);
-      }
-      Fedora_Item::forget($vro->pid);
-    }
   }
   
   public function showFieldSets($page = 0) {
@@ -92,24 +65,10 @@ EOQ
     return $tabset;
   }
   
-  private function _preservation_master_collection_view(&$weight) {
-    $collection = array(
-      '#type' => 'fieldset',
-      '#title' => t('Collection Members'),
-      '#weight' => $weight++,
-      'members' => array(
-        '#type' => 'markup',
-        '#weight' => $weight++,
-      )
-    );
-    
-    //1.  Draw paged list of mezzanines videos.
-    
+  private static function _hack_pager($pager_name, $per_page, $total_items) {
     //Pager hacking...  Huzzah!
-    $pager_name = 1;
     global $pager_total, $pager_page_array;
-    $per_page = $this->per_page;
-    $pager_total[$pager_name] = ceil($this->_get_number_of_children(FALSE) / $per_page); //TODO:  Get the total number...
+    $pager_total[$pager_name] = ceil($total_items / $per_page);
     
     $page_info = explode(',', isset($_GET['page']) ? $_GET['page'] : '');
     $page = $page_info[$pager_name];
@@ -125,21 +84,40 @@ EOQ
     }
     
     $page = $pager_page_array[$pager_name];
+    return $page;
+  }
+  
+  private function _preservation_master_collection_view(&$weight) {
+    $collection = array(
+      '#type' => 'fieldset',
+      '#title' => t('Collection Members'),
+      '#weight' => $weight++,
+      'members' => array(
+        '#type' => 'markup',
+        '#weight' => $weight++,
+      )
+    );
+    
+    //1.  Draw paged list of mezzanines videos.
+    
+    //Pager hacking...  Huzzah!
+    $pager_name = 1;
+    $page = self::_hack_pager($pager_name, $this->per_page, $this->_get_number_of_children(FALSE));
     //Done with pager hacking...
 
     
-    $i = $page * $per_page + 1;
+    $i = $page * $this->per_page + 1;
     $table_header = array(
       t(''),
       t('Thumbnail'),
       t('Info'),
     );
     $table_data = array();
-    foreach ($this->_get_collection_set($page, $per_page, FALSE) as $item) {
+    foreach ($this->_get_collection_set($page, $this->per_page, FALSE) as $item) {
       $path = "fedora/repository/{$item['vro']}";
       $table_data[] = array(
         $i++,
-        l(self::_get_imagecache_external_markup($item['vro'], $item['vro_title'], $item['vro_title']), $path, array('html' => TRUE)),
+        l(self::_get_image_markup($item['vro'], $item['vro_title'], $item['vro_title']), $path, array('html' => TRUE)),
         l($item['vro_title'], $path),
       );
     }
@@ -154,7 +132,7 @@ EOQ
       $collection['members']['#value'] = theme('table', $table_header, $table_data);
       $collection['pager'] = array(
         '#type' => 'markup',
-        '#value' => theme('pager', array(), $per_page, $pager_name),
+        '#value' => theme('pager', array(), $this->per_page, $pager_name),
         '#weight' => $weight++,
       );
     }
@@ -266,30 +244,28 @@ WHERE {
     return array('usc:mirc', 'TN');
   }
   
-  protected static function _get_imagecache_external_markup($for_pid, $alt = '', $title = '') {
+  protected static function _get_image_markup($for_pid, $alt = '', $title = '') {
     $fedora_image = self::_get_image($for_pid);
     $image = NULL;
     $fedora_base = variable_get('fedora_base_url', 'http://localhost:8080/fedora');
     $image_path = NULL;
+    $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
     
     if (empty($fedora_image)) {
       //TODO: $image gets some decent default image
     }
     else {
       list($pid, $dsid) = $fedora_image;
-      $image_path = "$fedora_base/objects/$pid/datastreams/$dsid/content";
-    }
-    
-    if (is_callable('imagecache_external_generate_path')) {
-      $image = imagecache_external_generate_path($image_path, variable_get('usc_mirc_imagecache_thumbnail_preset', 'test_thumbnail'));
-    }
-    
-    if (strpos($image, '/') === 0) {
-      $image = substr($image, 1); //XXX:  the imagecache path generated starts with a /, which theme('image') doesn't seem to like...
+      $image = "fedora/repository/$pid/$dsid";
     }
     
     if ($image) {
-      return theme('image', $image, $alt, $title, array(), FALSE);
+      if (module_exists('imagecache_external') && is_callable('theme_imagecache_external_image')) {
+        return theme('imagecache_external_image', $imagecache_preset, $image, $alt, $title);
+      }
+      else {
+        return theme('image', $image, $alt, $title, array(), FALSE);
+      }
     }
     else {
       return 'Makey image worky.';
@@ -311,40 +287,23 @@ WHERE {
     
     //Pager hacking...  Huzzah!
     $pager_name = 0;
-    global $pager_total, $pager_page_array;
-    $per_page = $this->per_page;
-    $pager_total[$pager_name] = ceil($this->_get_number_of_children() / $per_page); //TODO:  Get the total number...
-    
-    $page_info = explode(',', isset($_GET['page']) ? $_GET['page'] : '');
-    $page = $page_info[$pager_name];
-    if ($page < 0) {
-      $page = 0;
-    }
-    
-    if (!isset($pager_page_array)) {
-      $pager_page_array = pager_load_array($page, $pager_name, $page_info);
-    }
-    else {
-      $pager_page_array = pager_load_array($page, $pager_name, $pager_page_array);
-    }
-    
-    $page = $pager_page_array[$pager_name];
+    $page = self::_hack_pager($pager_name, $this->per_page, $this->_get_number_of_children(TRUE));
     //Done with pager hacking...
 
     
-    $i = $page * $per_page + 1;
+    $i = $page * $this->per_page + 1;
     $table_header = array(
       t(''),
       t('Thumbnail'),
       t('Info'),
     );
     $table_data = array();
-    foreach ($this->_get_collection_set($page, $per_page) as $item) {
+    foreach ($this->_get_collection_set($page, $this->per_page) as $item) {
       if (!(empty($item['mezzanine']) || empty($item['mezzanine_title']))) {
         $path = "fedora/repository/{$item['mezzanine']}";
         $table_data[] = array(
           $i++,
-          l(self::_get_imagecache_external_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE)),
+          l(self::_get_image_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE)),
           l($item['mezzanine_title'], $path),
         );
       }
@@ -360,7 +319,7 @@ WHERE {
       $collection['members']['#value'] = theme('table', $table_header, $table_data);
       $collection['pager'] = array(
         '#type' => 'markup',
-        '#value' => theme('pager', array(), $per_page, $pager_name),
+        '#value' => theme('pager', array(), $this->per_page, $pager_name),
         '#weight' => $weight++,
       );
     }
