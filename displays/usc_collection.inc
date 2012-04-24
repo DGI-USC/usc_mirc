@@ -325,7 +325,7 @@ WHERE {
     }
     else {
       $collection['members']['#value'] = theme('item_list', $table_data, '', 'ul', array(
-        'class' => 'collection-view',
+        'class' => 'usc-collection-view',
       ));
       $collection['pager'] = array(
         '#type' => 'markup',
