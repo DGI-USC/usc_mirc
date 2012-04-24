@@ -149,7 +149,7 @@ class IslandoraVideoCollection extends BaseContentModel {
       '#title' => t('Collection Metadata'),
       '#prefix' => '<div>',
       '#suffix' => '</div>',
-      '#weight' => $weight++,
+      '#sorted' => TRUE,
       '#attributes' => array(
         'class' => 'collection-metadata',
       ),
