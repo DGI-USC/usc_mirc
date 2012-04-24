@@ -151,7 +151,7 @@ class IslandoraVideoCollection extends BaseContentModel {
       '#weight' => $weight++,
       'collection_image' => array(
         '#type' => 'markup',
-        '#value' => theme('imagecache_external_image', 'featured_content_image', 'http://islandora.ca/sites/islandora.ca/themes/islandora/logo.png'),
+        '#value' => self::_get_image_markup($this->pid, '', '', 'featured_content_image'),
         '#weight' => -100
       ),
       'content' => _usc_mirc_get_unrendered_form('Collection Desc Display', $mods),
@@ -249,12 +249,15 @@ WHERE {
     return array('usc:mirc', 'TN');
   }
   
-  protected static function _get_image_markup($for_pid, $alt = '', $title = '') {
+  protected static function _get_image_markup($for_pid, $alt = '', $title = '', $imagecache_preset = NULL) {
     $fedora_image = self::_get_image($for_pid);
     $image = NULL;
     $fedora_base = variable_get('fedora_base_url', 'http://localhost:8080/fedora');
     $image_path = NULL;
-    $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
+    
+    if ($imagecache_preset === NULL) {
+      $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
+    }
     
     if (empty($fedora_image)) {
       //TODO: $image gets some decent default image
