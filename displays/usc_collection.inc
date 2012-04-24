@@ -144,20 +144,29 @@ class IslandoraVideoCollection extends BaseContentModel {
   
   private function _collection_info_fieldset(&$weight) {
     $mods = $this->item->get_datastream_dissemination('MODS');
-    return array(
+    $to_return = array(
       '#type' => 'fieldset',
       '#title' => t('Collection Metadata'),
       //'#value' => 'TODO: Render MODS here...',
       '#prefix' => '<div>',
       '#suffix' => '</div>',
       '#weight' => $weight++,
-      'collection_image' => array(
-        '#type' => 'markup',
-        '#value' => self::_get_image_markup($this->pid, '', '', 'featured_content_image'),
-        '#weight' => -100
-      ),
-      'content' => _usc_mirc_get_unrendered_form('Collection Desc Display', $mods),
     );
+    
+    $image = array(
+      '#type' => 'markup',
+      '#value' => self::_get_image_markup($this->pid, '', '', 'featured_content_image'),
+      '#sorted' => TRUE,
+    );
+    
+    foreach (_usc_mirc_get_unrendered_form('Collection Desc Display', $mods) as $key => $value) {
+      if ($key === 'title_info') {
+        $to_return['content']['collection_image'] = $image;
+      }
+      $to_return['content'][$key] = $value;
+    }
+
+    return $to_return;
   }
   
   private function _get_collection_set($page = 0, $number = 20, $mezzanines = TRUE) {
