@@ -1,0 +1,19 @@
+<!-- Template 'informed' by imagemagick, via the -format flag. -->
+<pbcoreInstantiationDocument xmlns="http://www.pbcore.org/PBCore/PBCoreNamespace.html">
+  <instantiationIdentifier source="filename">%f</instantiationIdentifier>
+  <instantiationDate dateType="created">%[date:created]</instantiationDate>
+  <instantiationColors>%[colorspace]</instantiationColors>
+  <!-- Probably makes more sense on the essence track... -/->
+  <instantiationStandard>%m</instantiationStandard>-->
+  <instantiationLocation>%i</instantiationLocation>
+  <!-- %%b file size is only a single frame...  Will have to make it get the size for all images... -/->
+  <instantiationFileSize>%%[total_size]</instantiationFileSize>-->
+  <instantiationEssenceTrack>
+    <essenceTrackType>Video</essenceTrackType>
+    <essenceTrackStandard>%m</essenceTrackStandard>
+    <essenceTrackBitDepth>%z</essenceTrackBitDepth>
+    <essenceTrackFrameRate>%[dpx:film.frame_rate]</essenceTrackFrameRate>
+    <essenceTrackFrameSize>%G</essenceTrackFrameSize>
+    <essenceTrackAspectRatio source="pixel aspect ratio">%[dpx:orientation.aspect_ratio]</essenceTrackAspectRatio>
+  </instantiationEssenceTrack>
+</pbcoreInstantiationDocument>
