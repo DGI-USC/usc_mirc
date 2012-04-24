@@ -4,8 +4,6 @@ module_load_include('inc', 'islandora_solr_search', 'IslandoraSolrResults');
 
 class USC_Results extends IslandoraSolrResults {
   private static function _get_image_path($doc) {
-    $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'test_thumbnail');
-    
     $image_dsid = '';
     $potential_dsids = array(
       'IMG',
@@ -21,19 +19,10 @@ class USC_Results extends IslandoraSolrResults {
     $path = '';
     if ($image_dsid) {
       $path = "fedora/repository/{$doc->PID}/$image_dsid";
-      
-      if (module_exists('imagecache_external')) {
-        $path = imagecache_external_generate_path($path, $imagecache_preset);
-      }
     }
     
     if (empty($path)) {
-      $path = imagecache_external_generate_path('http://upload.wikimedia.org/wikipedia/commons/1/12/Crystal_Clear_mimetype_video.png', $imagecache_preset);
-    }
-    
-    //XXX:  At the time of writing, imagecache_external_generate_path generates a path which starts with a '/', which isn't appreciated by theme('image')...  So...  Strip it!
-    if (strpos($path, '/') === 0) {
-      $path = substr($path, 1);
+      $path = 'http://upload.wikimedia.org/wikipedia/commons/1/12/Crystal_Clear_mimetype_video.png';
     }
     
     return $path;
@@ -54,16 +43,23 @@ class USC_Results extends IslandoraSolrResults {
       
       $output = array();
       $output['class'] = $classes;
-      //$output = "<div class='usc-mirc-solr-result $classes'>";
       
-      $title = 'pb_title_s';
+      $title = 'pb_parent_title_Main_ms';
       $title = (array)$doc->$title;
       $title = $title[0];
       $desc = 'pb_parent_description_custom_ms';
       $desc = (array)$doc->$desc;
       $desc = $desc[0];
       
-      $output['data'] .= l(theme('image', self::_get_image_path($doc), $title, $title, array(), FALSE), "fedora/repository/{$doc->PID}", array(
+      $image = self::_get_image_path($doc);
+      if (module_exists('imagecache_external') && is_callable('theme_imagecache_external_image')) {
+        $preset = $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
+        $image = theme('imagecache_external_image', $preset, $image, $title, $title);
+      }
+      else {
+        $image = theme('image', $image, $title, $title, array(), FALSE);
+      }
+      $output['data'] .= l($image, "fedora/repository/{$doc->PID}", array(
         'html' => TRUE
       ));
       
@@ -88,9 +84,12 @@ class USC_Results extends IslandoraSolrResults {
 
       $output_list[] = $output;
     }
-    
+
+    //$start = $results->response->start;
+    $start = 5;
     $output = theme('item_list', $output_list, '', 'ol', array(
-      'class' => 'usc-mirc-solr-results'
+      'class' => 'usc-mirc-solr-results',
+      'style' => 'counter-reset: item ' . $start . ';',
     ));
     
     return $output;
