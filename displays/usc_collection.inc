@@ -149,14 +149,14 @@ class IslandoraVideoCollection extends BaseContentModel {
       '#title' => t('Collection Metadata'),
       '#prefix' => '<div>',
       '#suffix' => '</div>',
-      '#sorted' => TRUE,
+      '#weight' => $weight++,
       '#attributes' => array(
         'class' => 'collection-metadata',
       ),
       'collection_image' => array(
         '#type' => 'markup',
         '#value' => self::_get_image_markup($this->pid, '', '', 'featured_content_image'),
-        '#sorted' => TRUE,
+        '#weight' => $weight++,
       ),
     );
     
@@ -166,7 +166,10 @@ class IslandoraVideoCollection extends BaseContentModel {
     unset($form['form_build_id']);
     unset($form['form_token']);
     foreach (element_children($form) as $key) {
-      $to_return[$key] = $form[$key];
+      $to_add = $form[$key];
+      unset($to_add['#sorted']);
+      $to_add['#weight'] = $weight++;
+      $to_return[$key] = $to_add;
     }
 
     return $to_return;
