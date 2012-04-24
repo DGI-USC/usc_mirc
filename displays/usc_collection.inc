@@ -155,7 +155,7 @@ class IslandoraVideoCollection extends BaseContentModel {
       ),
       'collection_image' => array(
         '#type' => 'markup',
-        '#value' => self::_get_image_markup($this->pid, '', '', 'featured_content_image'),
+        '#value' => self::_get_image_markup($this->pid, 'Collection image', 'Collection image', 'featured_content_image'),
         '#weight' => $weight++,
       ),
     );
