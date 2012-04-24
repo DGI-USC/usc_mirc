@@ -116,9 +116,9 @@ class IslandoraVideoCollection extends BaseContentModel {
     foreach ($this->_get_collection_set($page, $this->per_page, FALSE) as $item) {
       $path = "fedora/repository/{$item['vro']}";
       $table_data[] = array(
-        $i++,
-        l(self::_get_image_markup($item['vro'], $item['vro_title'], $item['vro_title']), $path, array('html' => TRUE)),
-        l($item['vro_title'], $path),
+        //$i++,
+        'data' => l(self::_get_image_markup($item['vro'], $item['vro_title'], $item['vro_title']), $path, array('html' => TRUE)) . l($item['vro_title'], $path),
+        'class' => 'collection-members',
       );
     }
     
@@ -129,7 +129,9 @@ class IslandoraVideoCollection extends BaseContentModel {
       );
     }
     else {
-      $collection['members']['#value'] = theme('table', $table_header, $table_data);
+      $collection['members']['#value'] = theme('item_list', $table_data, '', 'ul', array(
+        'class' => 'usc-collection-view',
+      ));
       $collection['pager'] = array(
         '#type' => 'markup',
         '#value' => theme('pager', array(), $this->per_page, $pager_name),
