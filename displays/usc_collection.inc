@@ -149,6 +149,11 @@ class IslandoraVideoCollection extends BaseContentModel {
       '#prefix' => '<div>',
       '#suffix' => '</div>',
       '#weight' => $weight++,
+      'collection_image' => array(
+        '#type' => 'markup',
+        '#value' => theme('imagecache_external_image', 'featured_content_image', 'http://islandora.ca/sites/islandora.ca/themes/islandora/logo.png'),
+        '#weight' => -100
+      ),
       'content' => _usc_mirc_get_unrendered_form('Collection Desc Display', $mods),
     );
   }
@@ -302,9 +307,8 @@ WHERE {
       if (!(empty($item['mezzanine']) || empty($item['mezzanine_title']))) {
         $path = "fedora/repository/{$item['mezzanine']}";
         $table_data[] = array(
-          $i++,
-          l(self::_get_image_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE)),
-          l($item['mezzanine_title'], $path),
+          //$i++,
+          l(self::_get_image_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE)) . l($item['mezzanine_title'], $path),
         );
       }
     }
@@ -316,7 +320,7 @@ WHERE {
       );
     }
     else {
-      $collection['members']['#value'] = theme('table', $table_header, $table_data);
+      $collection['members']['#value'] = theme('item_list', $table_data);
       $collection['pager'] = array(
         '#type' => 'markup',
         '#value' => theme('pager', array(), $this->per_page, $pager_name),
