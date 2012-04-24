@@ -311,7 +311,8 @@ WHERE {
         $path = "fedora/repository/{$item['mezzanine']}";
         $table_data[] = array(
           //$i++,
-          l(self::_get_image_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE)) . l($item['mezzanine_title'], $path),
+          'data' => l(self::_get_image_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE)) . l($item['mezzanine_title'], $path),
+          'class' => 'collection-members',
         );
       }
     }
@@ -323,7 +324,9 @@ WHERE {
       );
     }
     else {
-      $collection['members']['#value'] = theme('item_list', $table_data);
+      $collection['members']['#value'] = theme('item_list', $table_data, '', 'ul', array(
+        'class' => 'collection-view',
+      ));
       $collection['pager'] = array(
         '#type' => 'markup',
         '#value' => theme('pager', array(), $this->per_page, $pager_name),
