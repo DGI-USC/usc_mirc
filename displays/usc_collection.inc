@@ -117,7 +117,7 @@ class IslandoraVideoCollection extends BaseContentModel {
       $path = "fedora/repository/{$item['vro']}";
       $table_data[] = array(
         //$i++,
-        'data' => l(self::_get_image_markup($item['vro'], $item['vro_title'], $item['vro_title']), $path, array('html' => TRUE)) . l($item['vro_title'], $path),
+        'data' => l(self::_get_image_markup($item['vro'], $item['vro_title'], $item['vro_title']), $path, array('html' => TRUE , 'attributes' => array('class' => 'item-image-link'))) . l($item['vro_title'], $path, array('attributes' => array('class' => 'item-title-text'))),
         'class' => 'collection-members',
       );
     }
@@ -313,7 +313,7 @@ WHERE {
         $path = "fedora/repository/{$item['mezzanine']}";
         $table_data[] = array(
           //$i++,
-          'data' => l(self::_get_image_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE)) . l($item['mezzanine_title'], $path),
+          'data' => l(self::_get_image_markup($item['mezzanine'], $item['mezzanine_title'], $item['mezzanine_title']), $path, array('html' => TRUE, 'attributes' => array('class' => 'item-image-link'))) . l($item['mezzanine_title'], $path, array('attributes' => array('class' => 'item-title-text'))),
           'class' => 'collection-members',
         );
       }
