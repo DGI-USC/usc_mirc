@@ -519,7 +519,7 @@ function _usc_mirc_get_mezzanine_types(&$form_state) {
           NULL,
           $form_state['values']['derivative_type'],
           $id,
-          t('Whether this mezzanine is edited, or so on.'),
+          t('Whether this mezzanine is edited, or so on.  (This list can be edited/expanded on via !link)', array('!link' => l(t('the type taxonomy vocab'), "admin/content/taxonomy/edit/vocabulary/$id"))),
           FALSE,
           NULL
         );
@@ -549,7 +549,7 @@ function _usc_mirc_get_mezzanine_formats(&$form_state) {
           NULL,
           $form_state['values']['derivative_format'],
           $id,
-          t('Whether this mezzanine is edge-to-edge, cropped, or so on.'),
+          t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('the format taxonomy vocab'), "admin/content/taxonomy/edit/vocabulary/$id"))),
           FALSE,
           NULL
         );
