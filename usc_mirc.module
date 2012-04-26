@@ -657,9 +657,18 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
       $pbcore_doc = $pbcore_xpath->document;
       $pbcore_xpath->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
       
+      if (is_callable('taxonomy_get_term')) {
+        if ($f = taxonomy_get_term($values['derivative_format'])) {
+          $values['derivative_format'] = $f->name;
+        }
+        if ($t = taxonomy_get_term($values['derivative_type'])) {
+          $values['derivative_type'] = $t->name;
+        }
+      }
+      
       //4. Add the title, type and format fields
       $title =  _usc_mirc_get_title($values['parent_pid']);
-      $title .= ' (' . $values['derivative_format'] . ', ' . $values['derivative_type'] . ')';
+      //$title .= ' (' . $values['derivative_format'] . ', ' . $values['derivative_type'] . ')';
       $form_state['storage']['usc_mirc']['title'] = $title;
       
       $title_el = $pbcore_doc->createElement('instantiationAnnotation', $title);
