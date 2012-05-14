@@ -207,7 +207,7 @@ function usc_mirc_tabs_alter(&$element) {
   $dc = $element['fedora_object_details']['tabset']['view']['dc'];
 
   if (!empty($dc) && $dc['#type'] === 'markup') {
-    unset($element['fedora_object_details']['tabset']['view']['dc']);
+    //unset($element['fedora_object_details']['tabset']['view']['dc']);
   }
 }
 
@@ -930,3 +930,7 @@ function usc_mirc_perm() {
     'access preservation masters'
   );
 }
+
+//function usc_mirc_islandora_tabs_alter(&$tabset, $parameters) {
+  //Find every pager href, and add in the fragment ID of the tab dif
+//}

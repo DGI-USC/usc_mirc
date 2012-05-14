@@ -1,5 +1,36 @@
 <?php
 
+/**
+ * Post render callback for tabpages containing pagers.
+ * 
+ * @param $content string
+ * @param $element array
+ * @return string
+ */
+function usc_mirc_fix_pager_links($content, $element) {
+  if ($element['#type'] != 'tabpage') {
+  	watchdog('usc_mirc', 'Called usc_mirc_fix_pager_links on something which is not a tabpage, which does not make sense!');
+  	return $content;
+  }
+  
+  $content_xpath = new DOMXPath(DOMDocument::loadXML($content));
+  
+  //Find all hrefs in the pager...  Add fragment id with id of this element...
+  $pager_links = $content_xpath->query('//ul[contains(@class, "pager")]//a');
+  foreach ($pager_links as $link) {
+  	$parsed_href = parse_url($link->getAttribute('href'));
+  	
+  	$new_href = url($parsed_href['path'], array(
+  	  'query' => $parsed_href['query'],
+  	  'fragment' => $element['#id'],
+    ));
+  	
+  	$link->setAttribute('href', $new_href);
+  }
+  
+  return $content_xpath->document->saveXML();
+}
+
 abstract class BaseContentModel {
   protected $pid;
   protected $item;

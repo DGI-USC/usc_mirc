@@ -21,6 +21,7 @@ class IslandoraVideoCollection extends BaseContentModel {
         '#title' => t('Collection View'),
         '#weight' => $i++,
         '#tab_name' => 'collection-view',
+        '#post_render' => array('usc_mirc_fix_pager_links'),
         'mods' => $this->_collection_info_fieldset($i),
         'content' => $this->_collection_view($i, $page),
       );
@@ -33,19 +34,26 @@ class IslandoraVideoCollection extends BaseContentModel {
         '#title' => t('Preservation Masters'),
         '#weight' => $i++,
         '#tab_name' => 'preservation-masters',
+        '#post_render' => array('usc_mirc_fix_pager_links'),
         'content' => $this->_preservation_master_collection_view($i, $page),
       );
     }
     
     //3. Allow those permitted to add new preservation masters.
     if (user_access('access preservation masters') && user_access('ingest new fedora objects')) {
+      $form = _usc_mirc_get_unrendered_form('fedora_repository_ingest_form', $this->pid, 'collection', variable_get('usc_mirc_cmodel_vro', 'usc:test-vro'));
       $tabset['preservation-master-ingest'] = array(
         '#type' => 'tabpage',
         '#title' => t('Add New Preservation Master'),
         '#weight' => $i++,
         '#tab_name' => 'preservation-master-ingest',
-        'content' => _usc_mirc_get_unrendered_form('fedora_repository_ingest_form', $this->pid, 'collection', variable_get('usc_mirc_cmodel_vro', 'usc:test-vro')),
+      	'#selected' => isset($form['forms']),
+        'content' => $form,
       );
+
+      if ($tabset['preservation-master-ingest']['content']['forms']) {
+      	$tabset['preservation-master-ingest']['#selected'] = TRUE;
+      }
     }
     
     if (user_access('edit fedora meta data')) {
@@ -54,6 +62,7 @@ class IslandoraVideoCollection extends BaseContentModel {
       $tabset['edit_metadata'] = array(
         '#type' => 'tabpage',
         '#title' => t('Edit Collection Metadata'),
+        '#selected' => isset($form['forms']),
         //'#selected' => $showEdit,
         'content' => $form,
         //'#content' => $form,
