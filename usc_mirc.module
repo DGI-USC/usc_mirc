@@ -492,6 +492,21 @@ function usc_mirc_imagecache_default_presets() {
         ),
       ),
     ),
+    'usc_mirc_solr_thumbnail' => array(
+      'presetname' => 'usc_mirc_solr_thumbnail',
+      'actions' => array(
+        0 => array(
+          'weight' => 0,
+          'module' => 'imagecache',
+          'action' => 'imagecache_scale',
+          'data' => array(
+            'width' => 100,
+            'height' => 100,
+            'upscale' => TRUE,
+          ),
+        ),
+      ),
+    ),
     'featured_content_image' => array(
       'presetname' => 'featured_content_image',
       'actions' => array(

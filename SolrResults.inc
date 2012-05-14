@@ -44,16 +44,9 @@ class USC_Results extends IslandoraSolrResults {
       $output = array();
       $output['class'] = $classes;
       
-      $title = 'pb_parent_title_Main_ms';
-      $title = (array)$doc->$title;
-      $title = $title[0];
-      $desc = 'pb_parent_description_custom_ms';
-      $desc = (array)$doc->$desc;
-      $desc = $desc[0];
-      
       $image = self::_get_image_path($doc);
       if (module_exists('imagecache_external') && is_callable('theme_imagecache_external_image')) {
-        $preset = $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
+        $preset = $imagecache_preset = variable_get('usc_mirc_solr_imagecache_thumbnail_preset', 'usc_mirc_solr_thumbnail');
         $image = theme('imagecache_external_image', $preset, $image, $title, $title);
       }
       else {
@@ -67,19 +60,24 @@ class USC_Results extends IslandoraSolrResults {
         '#type' => 'markup',
         '#prefix' => '<div class="usc-mirc-text-block">',
         '#suffix' => '</div>',
-        array(
-          '#type' => 'item',
-          '#title' => t('Title'),
-          '#value' => l($title, "fedora/repository/{$doc->PID}"),
-          '#weight' => 1,
-        ),
-        array(
-          '#type' => 'item',
-          '#title' => t('Abstract'),
-          '#value' => (!empty($desc)?$desc:'(Empty abstract)'),
-          '#weight' => 2,
-        )
       );
+      $i = 1;
+      foreach ($this->resultFieldArray as $key => $display) {
+      	$value = $doc->$key;
+      	$value = (array)$value;
+        $value = $value[0];
+        if (!$value) {
+          $value = t('No value for field %field.', array('%field' => $key));
+        }
+      	$value = l($value, "fedora/repository/{$doc->PID}", array('html' => TRUE));
+      	
+      	$text_stuff[] = array(
+      	  '#type' => 'item',
+      	  '#title' => $display,
+          '#value' => $value,
+      	  '#weight' => $i++,
+      	);
+      }
       $output['data'] .= drupal_render($text_stuff);
 
       $output_list[] = $output;
