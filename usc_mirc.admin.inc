@@ -27,12 +27,27 @@ function usc_mirc_admin_form(&$form_state) {
       '#description' => t('The namespace/prefix with which new items will be created in Fedora (where a COLLECTION_POLICY doesn\'t already dictate it).'),
       '#default_value' => variable_get('usc_mirc_namespace', 'usc'),
     ),
+    'usc_mirc_number_per_page' => array(
+      '#type' => 'textfield',
+      '#weight' => $i++,
+      '#title' => t('Collection items per page'),
+      '#description' => t('The number of items which will appear in the mezzanine and preservation master collection displays. (A number)'),
+      '#default_value' => variable_get('usc_mirc_number_per_page', '15'),  
+    ),
     'usc_mirc_imagecache_thumbnail_preset' => array(
       '#type' => 'select',
       '#weight' => $i++,
-      '#title' => t('Thumbnail Imagecache preset'),
+      '#title' => t('Collection Thumbnail Imagecache preset'),
       '#description' => t('The preset with which thumbnails will be created.'),
       '#default_value' => variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail'),
+      '#options' => _usc_mirc_get_presets(),
+    ),
+  	'usc_mirc_solr_imagecache_thumbnail_preset' => array(
+      '#type' => 'select',
+      '#weight' => $i++,
+      '#title' => t('Solr Result Thumbnail Imagecache preset'),
+      '#description' => t('The preset with which thumbnails will be created.'),
+      '#default_value' => variable_get('usc_mirc_solr_imagecache_thumbnail_preset', 'usc_mirc_solr_imagecache_thumbnail_preset'),
       '#options' => _usc_mirc_get_presets(),
     ),
     'autocomplete' => array(

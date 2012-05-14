@@ -8,7 +8,7 @@ class IslandoraVideoCollection extends BaseContentModel {
   public function __construct($pid) {
     parent::__construct($pid);
     $this->pager_name = 0;
-    $this->per_page = 20;
+    $this->per_page = intval(variable_get('usc_mirc_number_per_page', '15'));
   }
   
   public function showFieldSets($page = 0) {
