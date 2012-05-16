@@ -13,12 +13,12 @@ function usc_mirc_fix_pager_links($content, $element) {
   	return $content;
   }
   
-  $content = DOMDocument::loadHTML($content);
-  if (!$content) {
+  $content_dom = new DOMDocument('1.0', 'utf-8');
+  if (!$content_dom->loadHTML('<?xml encoding="utf-8"?>' . $content)) {
     //Content isn't parsable!?...  Whatever.
     return $content;
   }
-  $content_xpath = new DOMXPath($content);
+  $content_xpath = new DOMXPath($content_dom);
   
   //Find all hrefs in the pager...  Add fragment id with id of this element...
   $pager_links = $content_xpath->query('//ul[contains(@class, "pager")]//a');
