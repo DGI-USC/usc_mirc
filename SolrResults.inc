@@ -53,7 +53,8 @@ class USC_Results extends IslandoraSolrResults {
         $image = theme('image', $image, $title, $title, array(), FALSE);
       }
       $output['data'] .= l($image, "fedora/repository/{$doc->PID}", array(
-        'html' => TRUE
+        'html' => TRUE,
+        'attributes' => array('class' => 'solr-image-link')
       ));
       
       $text_stuff = array(
@@ -63,13 +64,16 @@ class USC_Results extends IslandoraSolrResults {
       );
       $i = 1;
       foreach ($this->resultFieldArray as $key => $display) {
-      	$value = $doc->$key;
+
+        $value = $doc->$key;
       	$value = (array)$value;
         $value = $value[0];
         if (!$value) {
           $value = t('No value for field %field.', array('%field' => $key));
         }
-      	$value = l($value, "fedora/repository/{$doc->PID}", array('html' => TRUE));
+        if ($key == 'pb_parent_title_Main_ms') {
+      	  $value = l($value, "fedora/repository/{$doc->PID}", array('html' => TRUE,));
+      	}
       	
       	$text_stuff[] = array(
       	  '#type' => 'item',
@@ -79,6 +83,7 @@ class USC_Results extends IslandoraSolrResults {
       	);
       }
       $output['data'] .= drupal_render($text_stuff);
+      $output['data'] = '<div class="solr-wrap">' . $output['data'] . '</div>';
 
       $output_list[] = $output;
     }
