@@ -277,6 +277,7 @@ WHERE {
   
   protected static function _get_image_markup($for_pid, $alt = '', $title = '', $imagecache_preset = NULL) {
     $fedora_image = self::_get_image($for_pid);
+    #drupal_set_message(print_r($fedora_image, TRUE));
     $image = NULL;
     $fedora_base = variable_get('fedora_base_url', 'http://localhost:8080/fedora');
     $image_path = NULL;
