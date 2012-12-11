@@ -60,7 +60,7 @@ class USC_Results extends IslandoraSolrResults {
       $text_stuff = array(
         '#type' => 'markup',
         '#prefix' => '<div class="usc-mirc-text-block">',
-        '#suffix' => '</div>',
+        '#suffix' => '</div>'
       );
       $i = 1;
       foreach ($this->resultFieldArray as $key => $display) {
