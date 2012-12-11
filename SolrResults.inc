@@ -27,6 +27,10 @@ class USC_Results extends IslandoraSolrResults {
     
     return $path;
   }
+
+  public static function format_date($timestamp) {
+    return format_date($timestamp, 'custom', 'Y-m-d');
+  }
   
   function printResults($results) {
     if( (int)$results->response->numFound === 0 ) {
@@ -71,16 +75,29 @@ class USC_Results extends IslandoraSolrResults {
         'usc:test-mezzanine' => array(
           'pb_parent_title_Main_ms' => '',
           'pb_parent_description_summary_ms' => '',
+          'concatted_date_mdt' => '',
         ),
         'usc:collectionCModel' => array(
           'mods_title_s' => '',
           'mods_abstract_ms' => '',
+          'concatted_date_mdt' => '',
         ),
       );
       foreach (array_intersect_key($this->resultFieldArray, $field_sets[$model]) as $key => $display) {
         $value = $doc->$key;
       	$value = (array)$value;
-        $value = $value[0];
+        if ($key == 'concatted_date_mdt') {
+          $value = array_unique(
+            array_map('USC_Results::format_date', array_map(
+              'strtotime', $value))
+          );
+          sort($value);
+          $value = implode(', ', $value);
+        }
+        else {
+          $value = $value[0];
+        }
+        
 
         // Truncate, to deal with long descriptions.
         $value = truncate_utf8($value, 256, TRUE, TRUE);
