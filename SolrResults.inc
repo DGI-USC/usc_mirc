@@ -37,6 +37,7 @@ class USC_Results extends IslandoraSolrResults {
     $mod_path = drupal_get_path('module', 'usc_mirc');
     drupal_add_css("$mod_path/css/usc_mirc_solr_results.css");
     
+    $linkify = array('pb_parent_title_Main_ms', 'mods_title_s');
     $output_list = array();
     foreach ($results->response->docs as $key => $doc) {
       $classes = (($key % 2 === 0) ? 'odd' : 'even'); //May look weird (due to starting at 0)
@@ -63,15 +64,31 @@ class USC_Results extends IslandoraSolrResults {
         '#suffix' => '</div>'
       );
       $i = 1;
-      foreach ($this->resultFieldArray as $key => $display) {
 
+      $model = (array)$doc->rels_hasModel_uri_ms;
+      $model = $model[0];
+      $field_sets = array(
+        'usc:test-mezzanine' => array(
+          'pb_parent_title_Main_ms' => '',
+          'pb_parent_description_summary_ms' => '',
+        ),
+        'usc:collectionCModel' => array(
+          'mods_title_s' => '',
+          'mods_abstract_ms' => '',
+        ),
+      );
+      foreach (array_intersect_key($this->resultFieldArray, $field_sets[$model]) as $key => $display) {
         $value = $doc->$key;
       	$value = (array)$value;
         $value = $value[0];
+
+        // Truncate, to deal with long descriptions.
+        $value = truncate_utf8($value, 256, TRUE, TRUE);
+
         if (!$value) {
           $value = t('No value for field %field.', array('%field' => $key));
         }
-        if ($key == 'pb_parent_title_Main_ms') {
+        if (in_array($key, $linkify)) {
       	  $value = l($value, "fedora/repository/{$doc->PID}", array('html' => TRUE,));
       	}
       	
