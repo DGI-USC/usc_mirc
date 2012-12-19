@@ -13,7 +13,8 @@ class USC_Results extends IslandoraSolrResults {
     
     $intersected_dsids = array_intersect($potential_dsids, $doc->fedora_active_datastream_state);
     if ($intersected_dsids) {
-      $image_dsid = $intersected_dsids[0];
+      // Grab the first.
+      $image_dsid = reset($intersected_dsids);
     }
     
     $path = '';
