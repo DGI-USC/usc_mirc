@@ -76,12 +76,11 @@ class USC_Results extends IslandoraSolrResults {
         'usc:test-mezzanine' => array(
           'pb_parent_title_Main_ms' => '',
           'pb_parent_description_summary_ms' => '',
-          'concatted_date_mdt' => '',
+          'pb_parent_coverage_Temporal_ms' =>,
         ),
         'usc:collectionCModel' => array(
           'mods_title_s' => '',
           'mods_abstract_ms' => '',
-          'concatted_date_mdt' => '',
         ),
       );
       foreach (array_intersect_key($this->resultFieldArray, $field_sets[$model]) as $key => $display) {
