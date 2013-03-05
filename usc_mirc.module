@@ -1,0 +1,457 @@
+<?php
+
+function usc_mirc_menu() {
+  $items = array();
+  $items['islandora/object/%islandora_object/preservation-masters'] = array(
+    'title' => 'Preservation Masters',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('usc_mirc_preservation_masters_form', 2),
+    'access callback' => array('usc_mirc_preservation_tab_access'),
+    'access arguments' => array(2),
+  );
+  $items['admin/islandora/mirc-usc'] = array(
+    'title' => 'MIRC@SC',
+    'description' => 'Configure settings for the custom MIRC@SC module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('usc_mirc_admin_settings'),
+    'access arguments' => array('administer usc_mirc'),
+    'file' => 'includes/admin.inc',
+  );
+  $items['islandora/object/%islandora_object/manage/datastreams/usc-mirc-ingest'] = array(
+    'title callback' => 'usc_mirc_retrieve_ingest_title',
+    'title arguments' => array(2),
+    'access callback' => array('usc_mirc_ingest_access'),
+    'access arguments' => array(2),
+    'type' => MENU_LOCAL_ACTION,
+    'page callback' => 'usc_mirc_ingest_page',
+    'page arguments' => array(2),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function usc_mirc_menu_alter(&$items) {
+  // Move the manage tab to be the last tab.
+  $items['islandora/object/%islandora_object/manage']['weight'] = 10;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function usc_mirc_permission() {
+  return array(
+    'access MIRC@SC tabs' => array(
+      'title' => 'access MIRC@SC tabs',
+    ),
+    'administer usc_mirc' => array(
+      'title' => 'Administer the MIRC@SC custom module.',
+    ),
+  );
+}
+
+function usc_mirc_ingest_access($object) {
+  $usc_models = array('usc:mirc', 'usc:test-mezzanine', 'usc:collectionCModel', 'usc:test-vro');
+
+  if (user_access('administer usc_mirc')) {
+    if (array_intersect($usc_models, $object->models) || $object->id === 'usc:mirc') {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    return FALSE;
+  }
+}
+
+function usc_mirc_ingest_page(FedoraObject $object) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'islandora', 'includes/ingest.form');
+
+  if ($object->id === 'usc:mirc') {
+    drupal_set_title(t('Add a new subcollection'));
+    return drupal_get_form('islandora_ingest_form', array(
+        'namespace' => 'usc-mirc',
+        'collections' => array($object->id),
+        'models' => array('usc:collectionCModel'),
+      )
+    );
+  }
+  elseif (in_array('usc:test-mezzanine', $object->models)) {
+    drupal_set_title(t('Add a new access variant'));
+  }
+  elseif (in_array('usc:collectionCModel', $object->models)) {
+    drupal_set_title(t('Add a new preservation master'));
+    return drupal_get_form('islandora_ingest_form', array(
+        'namespace' => 'usc-mirc',
+        'collections' => array($object->id),
+        'models' => array('usc:test-vro'),
+      )
+    );
+  }
+  elseif (in_array('usc:test-vro', $object->models)) {
+    drupal_set_title(t('Add a new mezzanine'));
+  }
+}
+
+function usc_mirc_retrieve_ingest_title($object) {
+  if ($object->id === 'usc:mirc') {
+    return t('Add a new subcollection');
+  }
+  elseif (in_array('usc:test-mezzanine', $object->models)) {
+    return t('Add a new access variant');
+  }
+  elseif (in_array('usc:collectionCModel', $object->models)) {
+    return t('Add a new preservation master');
+  }
+  elseif (in_array('usc:test-vro', $object->models)) {
+    return t('Add a new mezzanine');
+  }
+}
+
+function usc_mirc_preservation_tab_access($object) {
+  if (in_array('usc:collectionCModel', $object->models)) {
+    if (user_access('access MIRC@SC tabs')) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    return FALSE;
+  }
+}
+
+function usc_mirc_islandora_xml_form_builder_form_associations() {
+  return array(
+    'usc_root_ingest' => array(
+      'content_model' => 'usc:collectionCModel',
+      'form_name' => 'Collection Description',
+      'dsid' => 'MODS',
+      'title_field' => array('title_info', 'title'),
+      'transform' => 'mods_to_dc.xsl',
+      'template' => FALSE,
+    ),
+    'usc_pbcore_preservation_location' => array(
+      'content_model' => 'usc:test-vro',
+      'form_name' => 'PBCore Updated Preservation Master Location',
+      'dsid' => 'PBCORE',
+      'title_field' => array('main_title'),
+      'transform' => 'pbcore_to_dc.xsl',
+      'template' => FALSE,
+    ),
+    'usc_pbcore_preservation_description' => array(
+      'content_model' => 'usc:test-vro',
+      'form_name' => 'PBCore Description Document',
+      'dsid' => 'PBCORE',
+      'title_field' => array('titles', 'main_title'),
+      'transform' => 'pbcore_to_dc.xsl',
+      'template' => FALSE,
+    ),
+  );
+}
+
+function usc_mirc_islandora_xml_form_builder_get_transforms() {
+  return array(
+    'pbcore_to_dc.xslt' => drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xslt',
+  );
+}
+
+/**
+ * Implements hook_islandora_xml_form_builder_forms().
+ */
+function usc_mirc_islandora_xml_form_builder_forms() {
+  $module_path = drupal_get_path('module', 'usc_mirc');
+  return array(
+    'Collection Desc Display' => array(
+      'form_file' => "$module_path/data/forms/collection_desc_display.xml",
+    ),
+    'Mezzanine Display' => array(
+      'form_file' => "$module_path/data/forms/mezzanine_display.xml",
+    ),
+    'Short Mezzanine Display' => array(
+      'form_file' => "$module_path/data/forms/short_mezzanine_display.xml",
+    ),
+    'Collection Description' => array(
+      'form_file' => "$module_path/data/forms/collection_desc.xml",
+    ),
+    'PBCore Update Preservation Master Location' => array(
+      'form_file' => "$module_path/data/forms/pbcore_master_location.xml",
+    ),
+    'PBCore Description Document' => array(
+      'form_file' => "$module_path/data/forms/pbcore_description.xml",
+    ),
+  );
+}
+function usc_mirc_usc_test_vro_islandora_view_object($object) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  $output = array(
+    'metadata' => usc_mirc_metadata_markup($object),
+  );
+  if (user_access('access MIRC@SC tabs')) {
+    $output['mezzanines_list'] = usc_mirc_mezzanines_list($object);
+  }
+  return array('' => drupal_render($output));
+}
+
+function usc_mirc_usc_collectionCModel_islandora_view_object($object) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  $form = array(
+    'collection_metadata' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Collection Metadata'),
+      '#collapsible' => FALSE,
+      '#collapsed' => TRUE,
+      'usc-collection-image' => array(
+        '#prefix' => '<div class="usc-collection-image">',
+        '#suffix' => '</div>',
+        'image_markup' => array(
+          '#markup' => usc_mirc_get_image_markup($object->id, 'Collection image', 'Collection image', 'featured_content_image'),
+        ),
+      ),
+
+    ),
+    'collection_members' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Collection Members'),
+      '#collapsible' => FALSE,
+      '#collapsed' => TRUE,
+      'members' => usc_mirc_collection_members_markup($object),
+    )
+  );
+
+  if (isset($object['MODS'])) {
+    $mods = $object['MODS']->content;
+    $metadata = drupal_get_form('Collection Desc Display', $mods);
+    $form['collection_metadata']['MODS_metadata'] = $metadata;
+  }
+  $output = drupal_render($form);
+  return array('' => $output);
+}
+
+function usc_mirc_usc_test_mezzanine_islandora_view_object($object) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  $output = array();
+  $output['mezzanine_display'] = array(
+    'player' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Player'),
+      '#attributes' => array(
+        'class' => array('usc-mirc-fieldset'),
+      ),
+      'flowplayer_video' => usc_mirc_flowplayer_markup($object),
+     ),
+    'short_metadata' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Basic Metadata'),
+      '#attributes' => array(
+        'class' => array('usc-mirc-fieldset'),
+      ),
+      'short_metadata' => usc_mirc_metadata_markup($object, TRUE),
+    ),
+  );
+
+  if (user_access('access MIRC@SC tabs')) {
+    $output['mezzanine_display']['access_variant_list'] = usc_mirc_access_variants($object);
+  }
+  $breadcrumb = array();
+  $breadcrumb[] = l('Home', '<front>');
+  $breadcrumb[] = l('Repository', 'islandora/object');
+  $breadcrumb[] = usc_mirc_build_breadcrumb($object);
+  // Add the preservation master breadcrumb if the user has permission
+  if (user_access('access MIRC@SC tabs')) {
+    $parent_pid = usc_mirc_get_mezzanine_parent($object);
+    if ($parent_pid) {
+      $parent_object = islandora_object_load($parent_pid);
+      $breadcrumb[] = l($parent_object->label, "islandora/object/$parent_pid");
+    }
+  }
+  drupal_set_breadcrumb($breadcrumb);
+  return array('' => drupal_render($output));
+}
+
+function usc_mirc_mezzanines_list($object) {
+  global $base_url;
+  $links = array();
+  $mezzanines = usc_mirc_get_derivatives($object);
+  foreach ($mezzanines as $mezzanine) {
+    $links['usc-mezzanines-' . $mezzanine['subject']['value']] = array(
+      'title' => $mezzanine['label']['value'],
+      'href' => $base_url . '/islandora/object/' . $mezzanine['subject']['value'],
+    );
+  }
+  $output = array(
+    'mezzanines' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Mezzanines'),
+     ),
+  );
+  if (count($links) > 0) {
+    $output['mezzanines']['mezzanines'] = array(
+      '#markup' => theme_links(array('links' => $links, 'attributes' => array(), 'heading' => array()))
+    );
+  }
+  else {
+    $output['mezzanines']['mezzanines'] = array(
+      '#markup' => t('No mezzanines currently present.'),
+    );
+  }
+  return $output;
+}
+
+function usc_mirc_access_variants($object) {
+  global $base_url;
+  $links = array();
+  $variants = usc_mirc_get_derivatives($object);
+  foreach ($variants as $variant) {
+    $links['usc-access-variants-' . $variant['subject']['value']] = array(
+      'title' => $variant['label']['value'],
+      'href' => $base_url . '/islandora/object/' . $variant['subject']['value'],
+    );
+  }
+  $output = array(
+    'access_variants' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Access Variants'),
+    ),
+  );
+  if (count($links) > 0) {
+     $output['access_variants']['list_variants'] = array(
+        '#markup' => theme_links(array('links' => $links, 'attributes' => array(), 'heading' => array()))
+     );
+  }
+  else {
+    $output['access_variants']['list_variants'] = array(
+      '#markup' => t('No access variants currently present.'),
+    );
+  }
+  return $output;
+}
+
+function usc_mirc_preservation_masters_form($form, &$form_state, $object) {
+  $form = array();
+  $form['preservation_masters'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Collection Members'),
+    '#collapsible' => FALSE,
+    '#collapsed' => TRUE,
+    'members' => usc_mirc_collection_members_markup($object, FALSE),
+  );
+  $breadcrumb = array();
+  $breadcrumb[] = l('Home', '<front>');
+  $breadcrumb[] = l('Repository', 'islandora/object');
+  drupal_set_breadcrumb($breadcrumb);
+  return $form;
+}
+
+function usc_mirc_collection_members_markup($object, $mezzanines = TRUE) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  $markup = array();
+  $per_page = variable_get('usc_mirc_number_per_page', '15');
+  $current_page = 0;
+
+  if (!empty($_GET['page'])) {
+    $current_page = $_GET['page'];
+  }
+  $child_num = usc_mirc_get_number_of_children($object, $mezzanines);
+  $results = usc_mirc_get_collection_set($object, $current_page, $per_page, $mezzanines);
+  $table_headers = array(
+     t(''),
+     t('Thumbnail'),
+     t('Info'),
+  );
+  $table_data = array();
+  if ($mezzanines) {
+    $field = 'mezzanine';
+    $field_title = 'mezzanine_title';
+  }
+  else {
+    $field = 'vro';
+    $field_title = 'vro_title';
+  }
+  foreach ($results as $item) {
+    if (!(empty($item[$field]) || empty($item[$field]))) {
+        $path = "islandora/object/{$item[$field]['value']}";
+        $image = usc_mirc_get_image_markup($item[$field]['value'], $item[$field_title]['value'], $item[$field_title]['value']);
+        $table_data[] = array(
+          'data' => l($image, $path, array('html' => TRUE, 'attributes' => array('class' => 'item-image-link'))) . l($item[$field_title]['value'], $path, array('attributes' => array('class' => 'item-title-text'))),
+          'class' => array('collection-members'),
+        );
+     }
+  }
+  if (count($table_data) === 0) {
+    $markup['data'] = array(
+      '#markup' => t('No public video information in this collection, yet.'),
+    );
+  }
+  else {
+    $markup['data'] = array(
+      '#markup' => theme('item_list', array('items' => $table_data, 'type' => 'ul', 'attributes' => array(
+      'class' => 'usc-collection-view',
+    ))));
+    pager_default_initialize($child_num, $per_page);
+    $markup['pager'] = array(
+      '#markup' => theme('pager'),
+    );
+  }
+  return $markup;
+}
+
+function usc_mirc_metadata_markup($object, $short = FALSE) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+
+  if ($short) {
+    $pbcore_pid = usc_mirc_get_mezzanine_parent($object);
+  }
+  else {
+    $pbcore_pid = $object->id;
+  }
+
+  if ($pbcore_pid) {
+    if ($short) {
+      $pbcore_object = islandora_object_load($pbcore_pid);
+    }
+    else {
+      $pbcore_object = $object;
+    }
+    if ($pbcore_object['PBCORE']) {
+      if ($short) {
+        return drupal_get_form('Short Mezzanine Display', $pbcore_object['PBCORE']->content);
+      }
+      else {
+        return drupal_get_form('Mezzanine Display', $pbcore_object['PBCORE']->content);
+      }
+    }
+    else {
+      $output = array(
+        '#title' => t('Failure!'),
+        '#markup' => t('Failed to load the PBCore; Datastream does not exist.')
+      );
+      return drupal_render($output);
+    }
+  }
+  else {
+    $output = array(
+      '#title' => t('Failure!'),
+      '#markup' => t('Failed to load the PBCore; Unable to retrieve pid of object that contains PBCORE.')
+    );
+    return drupal_render($output);
+  }
+}
+
+function usc_mirc_flowplayer_markup($object) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  $videos = array();
+  $derivative_vids = usc_mirc_get_derivatives($object);
+
+  foreach ($derivative_vids as $vid) {
+    $pid = $vid['subject']['value'];
+    $videos[] = variable_get('islandora_base_url', 'http://localhost:8080/fedora') . "/objects/$pid/datastreams/VIDEO/content";
+  }
+  return array('#markup' => usc_mirc_mezzanine_player_markup($videos));
+}

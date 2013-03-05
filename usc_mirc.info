@@ -1,0 +1,8 @@
+name = MIRC@SC Customization
+description = Module to hold custom modifications for USC.
+configure = admin/islandora/mirc-usc
+dependencies[] = islandora
+stylesheets[all][] = css/usc_mirc.css
+package = MIRC@SC
+version = 7.x-dev
+core = 7.x
