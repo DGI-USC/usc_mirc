@@ -1,5 +1,10 @@
 <?php
-
+/**
+ * @file
+ *
+ * Utilities used in the MIRC@SC module.
+ *
+ */
 function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_preset = NULL) {
   $object = islandora_object_load($pid);
   $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
@@ -21,6 +26,15 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
   }
 }
 
+/**
+ * Performs a SPARQL query to retrieve a collection set.
+ *
+ * @param type $object
+ * @param type $page
+ * @param type $number
+ * @param type $mezzanines
+ * @return type
+ */
 function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanines = TRUE) {
   $offset = $page * $number;
   $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
@@ -58,6 +72,13 @@ function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanin
   return $results;
 }
 
+/**
+ * Performs a SPARQL query to get number of children of an object.
+ *
+ * @param type $object
+ * @param type $mezzanines
+ * @return type
+ */
 function usc_mirc_get_number_of_children($object, $mezzanines = TRUE) {
   $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
   $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
@@ -85,6 +106,12 @@ function usc_mirc_get_number_of_children($object, $mezzanines = TRUE) {
   return count($results);
 }
 
+/**
+ * Performs a SPARQL query to retrieve the parent of a mezzanine object.
+ *
+ * @param type $object
+ * @return boolean
+ */
 function usc_mirc_get_mezzanine_parent($object) {
   $vro_cmodel = 'usc:test-vro';
   $def_rel = variable_get('usc_mirc_relationship', 'isDerivativeOf');
@@ -105,7 +132,7 @@ function usc_mirc_get_mezzanine_parent($object) {
   );
   $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
 
-  if(count($results) > 0) {
+  if (count($results) > 0) {
     return $results[0]['object']['value'];
   }
   else {
@@ -113,6 +140,13 @@ function usc_mirc_get_mezzanine_parent($object) {
   }
 }
 
+/**
+ * Adds the flowplayer markup to the current page.
+ *
+ * @global type $base_url
+ * @param type $videos
+ * @return type
+ */
 function usc_mirc_mezzanine_player_markup($videos) {
   global $base_url;
   $mod_path = drupal_get_path('module', 'usc_mirc');
@@ -149,22 +183,29 @@ EOJS
     if (count($videos) > 0) {
       $output = array(
         '#markup' => l(theme_image(array("path" => "$mod_path/images/playbuttonblack.jpg", 'alt' => 'Video placeholder', 'attributes' => array())), $videos[0],
-         array(
-          'html' => TRUE,
-          'attributes' => array(
-            'class' => array($player_class),
-          ),
-         )),
+          array(
+            'html' => TRUE,
+            'attributes' => array(
+              'class' => array($player_class),
+             ),
+          )),
       );
     }
     else {
       $output = array(
-        '#markup' => theme_image(array("path" => "$mod_path/images/NoVideoAvailable.jpg")),
+        '#markup' => theme_image(array("path" => "$mod_path/images/NoVideoAvailable.jpg", 'attributes' => array())),
       );
     }
     return drupal_render($output);
 }
 
+/**
+ * Performs a SPARQL query to retrieve derivatives of an object.
+ *
+ * @param type $object
+ * @param type $subject
+ * @return type
+ */
 function usc_mirc_get_derivatives($object, $subject = NULL) {
   if ($subject === NULL) {
     $def_rel = variable_get('usc_mirc_relationship', 'isDerivativeOf');
@@ -187,6 +228,12 @@ function usc_mirc_get_derivatives($object, $subject = NULL) {
   return $results;
 }
 
+/**
+ * Performs a SPARQL query to build a breadcrumb link back to the parent of the object.
+ *
+ * @param type $object
+ * @return type
+ */
 function usc_mirc_build_breadcrumb($object) {
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:test-vro');
   $mezz_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine');
@@ -220,4 +267,74 @@ function usc_mirc_build_breadcrumb($object) {
   $parent_object = islandora_object_load($results[0]['parent']['value']);
   $title = $parent_object->label;
   return l($title, "islandora/object/$parent_object->id");
+}
+
+/**
+ * Retrieves a list of mezzanine formats from the taxonomy.
+ *
+ * @param type $form_state
+ * @return type
+ */
+function usc_mirc_get_mezzanine_formats(&$form_state) {
+  if (module_exists('taxonomy')) {
+    $vocabs = taxonomy_get_vocabularies();
+    foreach ($vocabs as $id => $voc) {
+      if ($voc->name == variable_get('usc_mirc_mezzanine_format_vocab', 'usc_mirc_mezzanine_format_vocab')) {
+        return _taxonomy_term_select(
+          t('Derivative format'),
+          NULL,
+          $form_state['values']['derivative_format'],
+          $id,
+          t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('the format taxonomy vocab'), "admin/content/taxonomy/edit/vocabulary/$id"))),
+          FALSE,
+          NULL
+        );
+      }
+    }
+  }
+
+  return array(
+    '#type' => 'select',
+    '#title' => t('Derivative format'),
+    '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on.'),
+    '#options' => array(
+      'edge-to-edge' => t('Edge-to-edge/Full frame (including perfs)'),
+      'cropped' => t('Cropped'),
+    ),
+  );
+}
+
+/**
+ * Retrieves the types of mezzanines from the taxonomy.
+ *
+ * @param type $form_state
+ * @return type
+ */
+function usc_mirc_get_mezzanine_types(&$form_state) {
+  if (module_exists('taxonomy')) {
+    $vocabs = taxonomy_get_vocabularies();
+    foreach ($vocabs as $id => $voc) {
+      if ($voc->name == variable_get('usc_mirc_mezzanine_type_vocab', 'usc_mirc_mezzanine_type_vocab')) {
+        return _taxonomy_term_select(
+          t('Derivative type'),
+          NULL,
+          $form_state['values']['derivative_type'],
+          $id,
+          t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('the type taxonomy vocab'), "admin/content/taxonomy/edit/vocabulary/$id"))),
+          FALSE,
+          NULL
+        );
+      }
+    }
+  }
+
+  return array(
+    '#type' => 'select',
+    '#title' => t('Derivative type'),
+    '#description' => t('Whether this mezzanine is edited, or so on.'),
+    '#options' => array( //TODO: Built list programatically... Allow user configurable values (changable in admin form?)
+      'original' => t('Original'),
+      'edited' => t('Edited'),
+    ),
+  );
 }

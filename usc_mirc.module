@@ -1,5 +1,10 @@
 <?php
-
+/**
+ * @file
+ *
+ * Module used to house customizations for MIRC@SC.
+ *
+ */
 function usc_mirc_menu() {
   $items = array();
   $items['islandora/object/%islandora_object/preservation-masters'] = array(
@@ -7,7 +12,7 @@ function usc_mirc_menu() {
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('usc_mirc_preservation_masters_form', 2),
-    'access callback' => array('usc_mirc_preservation_tab_access'),
+    'access callback' => 'usc_mirc_preservation_tab_access',
     'access arguments' => array(2),
   );
   $items['admin/islandora/mirc-usc'] = array(
@@ -21,11 +26,31 @@ function usc_mirc_menu() {
   $items['islandora/object/%islandora_object/manage/datastreams/usc-mirc-ingest'] = array(
     'title callback' => 'usc_mirc_retrieve_ingest_title',
     'title arguments' => array(2),
-    'access callback' => array('usc_mirc_ingest_access'),
+    'access callback' => 'usc_mirc_ingest_access',
     'access arguments' => array(2),
     'type' => MENU_LOCAL_ACTION,
     'page callback' => 'usc_mirc_ingest_page',
     'page arguments' => array(2),
+  );
+  $items['usc/mezzanine-autocomplete'] = array(
+    'page callback' => 'usc_mirc_autocomplete_video_url',
+    'page arguments' => array(
+      variable_get('usc_mirc_mezzanine_url', '/mnt/mirc/mezz/mezzanine'),
+      variable_get('usc_mirc_mezzanine_folder', '/mnt/mirc/mezz/mezzanine'),
+      2,
+    ),
+    'access arguments' => array('administer usc_mirc'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['usc/streaming-autocomplete'] = array(
+    'page callback' => 'usc_mirc_autocomplete_video_url',
+    'page arguments' => array(
+      variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu'),
+      variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access'),
+      2,
+    ),
+    'access arguments' => array('administer usc_mirc'),
+    'type' => MENU_CALLBACK,
   );
   return $items;
 }
@@ -52,7 +77,13 @@ function usc_mirc_permission() {
   );
 }
 
-function usc_mirc_ingest_access($object) {
+/**
+ * Determines whether the user has access to ingest new objects or not.
+ *
+ * @param FedoraObject $object
+ * @return boolean
+ */
+function usc_mirc_ingest_access(FedoraObject $object) {
   $usc_models = array('usc:mirc', 'usc:test-mezzanine', 'usc:collectionCModel', 'usc:test-vro');
 
   if (user_access('administer usc_mirc')) {
@@ -68,6 +99,12 @@ function usc_mirc_ingest_access($object) {
   }
 }
 
+/**
+ * Page that loads the required ingest form depending on conditions.
+ *
+ * @param FedoraObject $object
+ * @return type
+ */
 function usc_mirc_ingest_page(FedoraObject $object) {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
@@ -83,6 +120,7 @@ function usc_mirc_ingest_page(FedoraObject $object) {
   }
   elseif (in_array('usc:test-mezzanine', $object->models)) {
     drupal_set_title(t('Add a new access variant'));
+    return drupal_get_form('usc_mirc_add_access_variant_form', $object->id);
   }
   elseif (in_array('usc:collectionCModel', $object->models)) {
     drupal_set_title(t('Add a new preservation master'));
@@ -95,10 +133,17 @@ function usc_mirc_ingest_page(FedoraObject $object) {
   }
   elseif (in_array('usc:test-vro', $object->models)) {
     drupal_set_title(t('Add a new mezzanine'));
+    return drupal_get_form('usc_mirc_add_mezzanine_form', $object->id);
   }
 }
 
-function usc_mirc_retrieve_ingest_title($object) {
+/**
+ * Title callback for changing the title for the ingest MENU_ACTION_LINK.
+ *
+ * @param type $object
+ * @return type
+ */
+function usc_mirc_retrieve_ingest_title(FedoraObject $object) {
   if ($object->id === 'usc:mirc') {
     return t('Add a new subcollection');
   }
@@ -113,6 +158,12 @@ function usc_mirc_retrieve_ingest_title($object) {
   }
 }
 
+/**
+ * Determines whether the user has access to the preservation access tab.
+ *
+ * @param FedoraObject $object
+ * @return boolean
+ */
 function usc_mirc_preservation_tab_access($object) {
   if (in_array('usc:collectionCModel', $object->models)) {
     if (user_access('access MIRC@SC tabs')) {
@@ -127,6 +178,9 @@ function usc_mirc_preservation_tab_access($object) {
   }
 }
 
+/**
+ * Implements hook_islandora_xml_form_builder_form_associations().
+ */
 function usc_mirc_islandora_xml_form_builder_form_associations() {
   return array(
     'usc_root_ingest' => array(
@@ -156,6 +210,9 @@ function usc_mirc_islandora_xml_form_builder_form_associations() {
   );
 }
 
+/**
+ * Implements hook_islandora_xml_form_builder_get_transforms().
+ */
 function usc_mirc_islandora_xml_form_builder_get_transforms() {
   return array(
     'pbcore_to_dc.xslt' => drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xslt',
@@ -188,6 +245,10 @@ function usc_mirc_islandora_xml_form_builder_forms() {
     ),
   );
 }
+
+/**
+ * Implements hook_CMODEL_islandora_view_object().
+ */
 function usc_mirc_usc_test_vro_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $output = array(
@@ -199,6 +260,9 @@ function usc_mirc_usc_test_vro_islandora_view_object($object) {
   return array('' => drupal_render($output));
 }
 
+/**
+ * Implements hook_CMODEL_islandora_view_object().
+ */
 function usc_mirc_usc_collectionCModel_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $form = array(
@@ -234,6 +298,9 @@ function usc_mirc_usc_collectionCModel_islandora_view_object($object) {
   return array('' => $output);
 }
 
+/**
+ * Implements hook_CMODEL_islandora_view_object().
+ */
 function usc_mirc_usc_test_mezzanine_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $output = array();
@@ -245,7 +312,7 @@ function usc_mirc_usc_test_mezzanine_islandora_view_object($object) {
         'class' => array('usc-mirc-fieldset'),
       ),
       'flowplayer_video' => usc_mirc_flowplayer_markup($object),
-     ),
+    ),
     'short_metadata' => array(
       '#type' => 'fieldset',
       '#title' => t('Basic Metadata'),
@@ -260,8 +327,8 @@ function usc_mirc_usc_test_mezzanine_islandora_view_object($object) {
     $output['mezzanine_display']['access_variant_list'] = usc_mirc_access_variants($object);
   }
   $breadcrumb = array();
-  $breadcrumb[] = l('Home', '<front>');
-  $breadcrumb[] = l('Repository', 'islandora/object');
+  $breadcrumb[] = l(t('Home'), '<front>');
+  $breadcrumb[] = l(t('Repository'), 'islandora/object');
   $breadcrumb[] = usc_mirc_build_breadcrumb($object);
   // Add the preservation master breadcrumb if the user has permission
   if (user_access('access MIRC@SC tabs')) {
@@ -275,7 +342,14 @@ function usc_mirc_usc_test_mezzanine_islandora_view_object($object) {
   return array('' => drupal_render($output));
 }
 
-function usc_mirc_mezzanines_list($object) {
+/**
+ * Generates the markup for the list of mezzanines.
+ *
+ * @global type $base_url
+ * @param FedoraObject$object
+ * @return type
+ */
+function usc_mirc_mezzanines_list(FedoraObject $object) {
   global $base_url;
   $links = array();
   $mezzanines = usc_mirc_get_derivatives($object);
@@ -289,7 +363,7 @@ function usc_mirc_mezzanines_list($object) {
     'mezzanines' => array(
       '#type' => 'fieldset',
       '#title' => t('Mezzanines'),
-     ),
+    ),
   );
   if (count($links) > 0) {
     $output['mezzanines']['mezzanines'] = array(
@@ -304,6 +378,13 @@ function usc_mirc_mezzanines_list($object) {
   return $output;
 }
 
+/**
+ * Generates the markup for the list of access variants.
+ *
+ * @global type $base_url
+ * @param type $object
+ * @return type
+ */
 function usc_mirc_access_variants($object) {
   global $base_url;
   $links = array();
@@ -321,9 +402,9 @@ function usc_mirc_access_variants($object) {
     ),
   );
   if (count($links) > 0) {
-     $output['access_variants']['list_variants'] = array(
-        '#markup' => theme_links(array('links' => $links, 'attributes' => array(), 'heading' => array()))
-     );
+    $output['access_variants']['list_variants'] = array(
+      '#markup' => theme_links(array('links' => $links, 'attributes' => array(), 'heading' => array()))
+    );
   }
   else {
     $output['access_variants']['list_variants'] = array(
@@ -333,6 +414,14 @@ function usc_mirc_access_variants($object) {
   return $output;
 }
 
+/**
+ * Generates the form for the preservation masters.
+ *
+ * @param type $form
+ * @param type $form_state
+ * @param type $object
+ * @return type
+ */
 function usc_mirc_preservation_masters_form($form, &$form_state, $object) {
   $form = array();
   $form['preservation_masters'] = array(
@@ -343,12 +432,19 @@ function usc_mirc_preservation_masters_form($form, &$form_state, $object) {
     'members' => usc_mirc_collection_members_markup($object, FALSE),
   );
   $breadcrumb = array();
-  $breadcrumb[] = l('Home', '<front>');
-  $breadcrumb[] = l('Repository', 'islandora/object');
+  $breadcrumb[] = l(t('Home'), '<front>');
+  $breadcrumb[] = l(t('Repository'), 'islandora/object');
   drupal_set_breadcrumb($breadcrumb);
   return $form;
 }
 
+/**
+ * Generates the markup for the collection members.
+ *
+ * @param type $object
+ * @param type $mezzanines
+ * @return type
+ */
 function usc_mirc_collection_members_markup($object, $mezzanines = TRUE) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $markup = array();
@@ -361,9 +457,9 @@ function usc_mirc_collection_members_markup($object, $mezzanines = TRUE) {
   $child_num = usc_mirc_get_number_of_children($object, $mezzanines);
   $results = usc_mirc_get_collection_set($object, $current_page, $per_page, $mezzanines);
   $table_headers = array(
-     t(''),
-     t('Thumbnail'),
-     t('Info'),
+    t(''),
+    t('Thumbnail'),
+    t('Info'),
   );
   $table_data = array();
   if ($mezzanines) {
@@ -376,13 +472,13 @@ function usc_mirc_collection_members_markup($object, $mezzanines = TRUE) {
   }
   foreach ($results as $item) {
     if (!(empty($item[$field]) || empty($item[$field]))) {
-        $path = "islandora/object/{$item[$field]['value']}";
-        $image = usc_mirc_get_image_markup($item[$field]['value'], $item[$field_title]['value'], $item[$field_title]['value']);
-        $table_data[] = array(
-          'data' => l($image, $path, array('html' => TRUE, 'attributes' => array('class' => 'item-image-link'))) . l($item[$field_title]['value'], $path, array('attributes' => array('class' => 'item-title-text'))),
-          'class' => array('collection-members'),
-        );
-     }
+      $path = "islandora/object/{$item[$field]['value']}";
+      $image = usc_mirc_get_image_markup($item[$field]['value'], $item[$field_title]['value'], $item[$field_title]['value']);
+      $table_data[] = array(
+        'data' => l($image, $path, array('html' => TRUE, 'attributes' => array('class' => 'item-image-link'))) . l($item[$field_title]['value'], $path, array('attributes' => array('class' => 'item-title-text'))),
+        'class' => array('collection-members'),
+      );
+    }
   }
   if (count($table_data) === 0) {
     $markup['data'] = array(
@@ -402,6 +498,13 @@ function usc_mirc_collection_members_markup($object, $mezzanines = TRUE) {
   return $markup;
 }
 
+/**
+ * Generates markup for display purposes from a PBCore record.
+ *
+ * @param type $object
+ * @param type $short
+ * @return type
+ */
 function usc_mirc_metadata_markup($object, $short = FALSE) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
 
@@ -444,6 +547,12 @@ function usc_mirc_metadata_markup($object, $short = FALSE) {
   }
 }
 
+/**
+ * Generates markup for flowplayer.
+ *
+ * @param type $object
+ * @return type
+ */
 function usc_mirc_flowplayer_markup($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $videos = array();
@@ -454,4 +563,286 @@ function usc_mirc_flowplayer_markup($object) {
     $videos[] = variable_get('islandora_base_url', 'http://localhost:8080/fedora') . "/objects/$pid/datastreams/VIDEO/content";
   }
   return array('#markup' => usc_mirc_mezzanine_player_markup($videos));
+}
+
+/**
+ * The form for adding a mezzanine.
+ *
+ * @param type $form
+ * @param type $form_state
+ * @param type $pid
+ * @return type
+ */
+function usc_mirc_add_mezzanine_form($form, &$form_state, $pid) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  $form = array(
+    'parent_pid' => array(
+      '#type' => 'hidden',
+      '#value' => $pid,
+    ),
+    'file_name' => array(
+      '#type' => 'textfield',
+      '#title' => t('Mezzanine file path'),
+      '#description' => t('Used to extract technical metadata.'),
+      '#autocomplete_path' => 'usc/mezzanine-autocomplete',
+      '#weight' => -20,
+    ),
+    'derivative_type' => usc_mirc_get_mezzanine_types($form_state),
+    'derivative_format' => usc_mirc_get_mezzanine_formats($form_state),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Ingest'),
+    ),
+  );
+  return $form;
+}
+
+/**
+ * Validation for the add mezzanine form.
+ *
+ * @param type $form
+ * @param type $form_state
+ * @throws Exception
+ */
+function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
+  $values = $form_state['values'];
+  $file = $values['file_name'];
+  if (empty($file)) {
+    form_set_error('file_name', t('Enter a non-empty path for the file field!'));
+  }
+  elseif (!(is_file($file) && is_readable($file))) {
+    form_set_error('file_name', t('The file %file_name (at %file_path) does not seem to exist or is not readable!', array(
+      '%file_path' => $file,
+      '%file_name' => isset($form['file_name']['#options']) ? $form['file_name']['#options'][$file] : '',
+    )));
+  }
+  else {
+    $old_level = error_reporting(-1);
+    try {
+      $parent_object = islandora_object_load($values['parent_pid']);
+      // Grab media info output for the given file...
+      $command = 'mediainfo --Full --Output=XML ' . escapeshellarg($values['file_name']);
+      $descriptor = array(
+        1 => array('pipe', 'w'),
+      );
+      $pipes = array();
+      $command = escapeshellcmd($command);
+      $media_proc = proc_open($command, $descriptor, $pipes);
+      $mediainfo_output = '';
+
+      if (!is_resource($media_proc)) {
+        form_set_error('file_name', t('Error extracting metadata with Mediainfo!'));
+        throw new Exception('Get outta here!');
+      }
+      else {
+        $mediainfo_output = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $return_value = proc_close($media_proc);
+      }
+
+      $mediainfo_doc = new DOMDocument();
+      $mediainfo_doc->loadXML($mediainfo_output);
+
+      if (!$mediainfo_doc) {
+        form_set_error('', t('Mediainfo output failed to parse with DOMDocument!'));
+        throw new Exception('Get outta here!');
+      }
+
+      // Transform the mediainfo file to pbcore
+      $pbcore_transform = new DOMDocument();
+      $pbcore_transform->load(drupal_get_path('module', 'usc_mirc') . '/transforms/mediainfo_to_pbcoreInstantiation.xsl');
+
+      if ($pbcore_transform === FALSE) {
+        watchdog('usc_mirc', 'Failed to load transform!', array(), WATCHDOG_ERROR);
+        throw new Exception('Get outta here!');
+      }
+      $transformer = new XSLTProcessor();
+      $transformer->importStylesheet($pbcore_transform);
+
+
+      $intermediate_pbcore = $transformer->transformToDoc($mediainfo_doc);
+      if (!$intermediate_pbcore) {
+        form_set_error('', t('Failed transforming Mediainfo XML to PBCore!'));
+        throw new Exception('Get outta here!');
+      }
+      //No longer need this (have the transformed version), free it up.
+      unset($mediainfo_doc);
+
+      $pbcore_xpath = new DOMXPath($intermediate_pbcore);
+      $pbcore_doc = $pbcore_xpath->document;
+      $pbcore_xpath->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+
+      if (is_callable('taxonomy_get_term')) {
+        if ($f = taxonomy_get_term($values['derivative_format'])) {
+          $values['derivative_format'] = $f->name;
+        }
+        if ($t = taxonomy_get_term($values['derivative_type'])) {
+          $values['derivative_type'] = $t->name;
+        }
+      }
+
+      // Add the title, type and format fields
+      $title =  $parent_object->label;
+      $form_state['storage']['usc_mirc']['title'] = $title;
+
+      $title_el = $pbcore_doc->createElement('instantiationAnnotation', $title);
+      $title_el->setAttribute('annotationType', 'instantiation_title');
+
+      foreach ($pbcore_xpath->query('//pb:instantiationEssenceTrack[pb:essenceTrackType/text()="Video"]/pb:essenceTrackFrameSize') as $format_el) {
+        $format_el->setAttribute('annotation', $values['derivative_format']);
+      }
+
+      $type_el = $pbcore_doc->createElement('instantiationGenerations', $values['derivative_type']);
+
+      $doc_el = $pbcore_doc->documentElement;
+      $doc_el->appendChild($title_el);
+      $doc_el->appendChild($type_el);
+
+      $pbcore_doc->normalizeDocument();
+      $form_state['storage']['usc_mirc']['pbcore'] = $pbcore = $pbcore_doc->saveXML();
+
+      // Create DC transformation of PBCore.
+      $dc_transform = new DOMDocument();
+      $dc_transform->load(drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xsl');
+      if (!$dc_transform) {
+        form_set_error('', t('Failed loading PBCore to DC transform!'));
+        throw new Exception('Get outta here!');
+      }
+      $transformer = new XSLTProcessor();
+      $transformer->importStyleSheet($dc_transform);
+
+      $pbcore_doc = new DOMDocument();
+      $pbcore_doc->loadXML($pbcore); //XXX:  This seems to be necessary for some reason...  It seems to fail to get the newly added elements for the transform otherwise.  DOMDocument, y u no work!?
+      $form_state['storage']['usc_mirc']['dc'] = $dc = $transformer->transformToXML($pbcore_doc);
+      if (!$dc) {
+        form_set_error('', t('Failed transforming PBCore XML to DC!'));
+        throw new Exception('Get outta here!');
+      }
+      //No longer need this (have it in a string), free it up.
+      unset($pbcore_doc);
+    }
+    catch (Exception $e) {
+      //Do nothing...
+    }
+    error_reporting($old_level);
+  }
+}
+
+/**
+ * Submit handler for the add mezzanine form.
+ *
+ * @global type $user
+ * @param type $form
+ * @param type $form_state
+ */
+function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
+  global $user;
+
+  $values = $form_state['values'];
+  $pbcore = $form_state['storage']['usc_mirc']['pbcore'];
+  $dc = $form_state['storage']['usc_mirc']['dc'];
+  $title = $form_state['storage']['usc_mirc']['title'];
+
+  // If we've properly created the metadata, create the Fedora Object
+  if ($pbcore && $dc) {
+    $pid_namespace = variable_get('usc_mirc_namespace', 'usc');
+    $tuque = islandora_get_tuque_connection();
+    $object = $tuque->repository->constructObject($pid_namespace);
+    $object->owner = isset($user->name) ? $user->name : $object->owner;
+    $object->label = $title;
+    $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $values['parent_pid']);
+    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'));
+
+    $dc_ds = $object->constructDatastream('DC', 'X');
+    $dc_ds->label = 'DC Record';
+    $dc_ds->mimetype = 'text/xml';
+    $dc_ds->setContentFromString($dc);
+    $object->ingestDatastream($dc_ds);
+
+    $pbcore_ds = $object->constructDatastream('PBCORE', 'X');
+    $pbcore_ds->label = 'PBCORE Record';
+    $pbcore_ds->mimetype = 'text/xml';
+    $pbcore_ds->setContentFromString($pbcore);
+    $object->ingestDatastream($pbcore_ds);
+
+    islandora_add_object($object);
+    $form_state['redirect'] = "islandora/object/$object->id";
+  }
+  else {
+    drupal_set_message(t('PBCore or DC metadata not present!'), 'error');
+  }
+}
+
+/**
+ * The form for adding an access variant.
+ *
+ * @param array $form
+ * @param type $form_state
+ * @param type $pid
+ * @return array
+ */
+function usc_mirc_add_access_variant_form($form, &$form_state, $pid) {
+  $form = array(
+    'parent_pid' => array(
+      '#type' => 'hidden',
+      '#value' => $pid,
+    ),
+    'title' => array(
+      '#type' => 'textfield',
+      '#title' => t('Object label'),
+      '#required' => TRUE,
+    ),
+    'streaming_url' => array(
+      '#type' => 'textfield',
+      '#title' => t('Streaming URL'),
+      '#id' => 'usc-mirc-streaming-url',
+      '#required' => TRUE,
+      '#autocomplete_path' => 'usc/streaming-autocomplete',
+    ),
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Ingest'),
+    )
+  );
+  return $form;
+}
+
+/**
+ * Submit handler for the access variant form.
+ *
+ * @global type $user
+ * @param type $form
+ * @param array $form_state
+ */
+function usc_mirc_add_access_variant_form_submit($form, &$form_state) {
+  global $user;
+  $values = $form_state['values'];
+  $pid_namespace = variable_get('usc_mirc_namespace', 'usc');
+
+  $tuque = islandora_get_tuque_connection();
+  $object = $tuque->repository->constructObject($pid_namespace);
+  $object->owner = isset($user->name) ? $user->name : $object->owner;
+  $object->label = $values['title'];
+  $video_ds = $object->constructDatastream('VIDEO', 'R');
+  $video_ds->label = 'VIDEO';
+  $video_ds->mimetype = 'video/mp4';
+  $video_ds->url = $values['streaming_url'];
+  $object->ingestDatastream($video_ds);
+  $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $values['parent_pid']);
+  $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_access', 'usc:test-access'));
+  islandora_add_object($object);
+  $form_state['redirect'] = "islandora/object/$object->id";
+}
+
+/**
+ * Autocomplete callback used to obtain streaming URLs.
+ */
+function usc_mirc_autocomplete_video_url($url_base, $filesystem_base, $string) {
+  module_load_include('inc', 'usc_mirc', 'includes/autocomplete');
+
+  $videos = usc_mirc_traverse_directory($url_base, $filesystem_base, $string);
+  $videos = array_filter($videos, 'usc_mirc_is_video_filename');
+
+  ksort($videos);
+  drupal_json_output($videos);
 }
