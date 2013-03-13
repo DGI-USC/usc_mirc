@@ -848,37 +848,6 @@ function usc_mirc_autocomplete_video_url($url_base, $filesystem_base, $string) {
 }
 
 /**
- * Implements hook_CMODEL_islandora_solr_results_alter().
- *
- * Restricts and renders fields to display for Solr results referencing collection objects.
- */
-function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
-  $docs = array();
-  $fields = array(
-    'mods_title_s',
-    'mods_abstract_ms',
-    'concatted_date_mdt'  
-  );
-  foreach ($object_index['solr_doc'] as $field => $value) {
-    if (in_array($field, $fields)) {
-      if ($field == 'mods_title_s') {
-        $value = implode(', ', $value);
-        $value = l($value, $object_index['object_url']);
-      }
-      if ($field == 'concatted_date_mdt') {
-        foreach ($value as $key => $val) {
-          $value[$key] = format_date(strtotime(trim($value[$key])), 'custom', 'Y-m-d');
-        }
-      }
-      $docs[$field] = $value;
-    }
-  }
-  if (!empty($docs)) {
-    $object_index['solr_doc'] = $docs;
-  }
-}
-
-/**
  * Implements hook_image_default_styles().
  */
 function usc_mirc_image_default_styles() {
@@ -931,6 +900,37 @@ function usc_mirc_image_default_styles() {
   );
 
   return $styles;
+}
+
+/**
+ * Implements hook_CMODEL_islandora_solr_results_alter().
+ *
+ * Restricts and renders fields to display for Solr results referencing collection objects.
+ */
+function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
+  $docs = array();
+  $fields = array(
+    'mods_title_s',
+    'mods_abstract_ms',
+    'concatted_date_mdt'  
+  );
+  foreach ($object_index['solr_doc'] as $field => $value) {
+    if (in_array($field, $fields)) {
+      if ($field == 'mods_title_s') {
+        $value = implode(', ', $value);
+        $value = l($value, $object_index['object_url']);
+      }
+      if ($field == 'concatted_date_mdt') {
+        foreach ($value as $key => $val) {
+          $value[$key] = format_date(strtotime(trim($value[$key])), 'custom', 'Y-m-d');
+        }
+      }
+      $docs[$field] = $value;
+    }
+  }
+  if (!empty($docs)) {
+    $object_index['solr_doc'] = $docs;
+  }
 }
 
 /**
