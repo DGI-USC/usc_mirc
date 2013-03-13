@@ -846,3 +846,155 @@ function usc_mirc_autocomplete_video_url($url_base, $filesystem_base, $string) {
   ksort($videos);
   drupal_json_output($videos);
 }
+
+/**
+ * Implements hook_CMODEL_islandora_solr_results_alter().
+ *
+ * Restricts and renders fields to display for Solr results referencing collection objects.
+ */
+function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
+  $docs = array();
+  $fields = array(
+    'mods_title_s',
+    'mods_abstract_ms',
+    'concatted_date_mdt'  
+  );
+  foreach ($object_index['solr_doc'] as $field => $value) {
+    if (in_array($field, $fields)) {
+      if ($field == 'mods_title_s') {
+        $value = implode(', ', $value);
+        $value = l($value, $object_index['object_url']);
+      }
+      if ($field == 'concatted_date_mdt') {
+        foreach ($value as $key => $val) {
+          $value[$key] = format_date(strtotime(trim($value[$key])), 'custom', 'Y-m-d');
+        }
+      }
+      $docs[$field] = $value;
+    }
+  }
+  if (!empty($docs)) {
+    $object_index['solr_doc'] = $docs;
+  }
+}
+
+/**
+ * Implements hook_image_default_styles().
+ */
+function usc_mirc_image_default_styles() {
+  $styles = array();
+
+  // usc_mirc_thumbnail.
+  $styles['usc_mirc_thumbnail'] = array(
+    'name' => 'usc_mirc_thumbnail',
+    'effects' => array(
+      1 => array(
+        'label' => 'Scale',
+        'help' => 'Scaling will maintain the aspect-ratio of the original image. If only a single dimension is specified, the other dimension will be calculated.',
+        'effect callback' => 'image_scale_effect',
+        'dimensions callback' => 'image_scale_dimensions',
+        'form callback' => 'image_scale_form',
+        'summary theme' => 'image_scale_summary',
+        'module' => 'image',
+        'name' => 'image_scale',
+        'data' => array(
+          'width' => '200',
+          'height' => '200',
+          'upscale' => 1,
+        ),
+        'weight' => '1',
+      ),
+    ),
+  );
+
+  // usc_solr_thumbnail.
+  $styles['usc_solr_thumbnail'] = array(
+    'name' => 'usc_solr_thumbnail',
+    'effects' => array(
+      2 => array(
+        'label' => 'Scale',
+        'help' => 'Scaling will maintain the aspect-ratio of the original image. If only a single dimension is specified, the other dimension will be calculated.',
+        'effect callback' => 'image_scale_effect',
+        'dimensions callback' => 'image_scale_dimensions',
+        'form callback' => 'image_scale_form',
+        'summary theme' => 'image_scale_summary',
+        'module' => 'image',
+        'name' => 'image_scale',
+        'data' => array(
+          'width' => '150',
+          'height' => '',
+          'upscale' => 1,
+        ),
+        'weight' => '1',
+      ),
+    ),
+  );
+
+  return $styles;
+}
+
+/**
+ * Implements hook_CMODEL_islandora_solr_results_alter().
+ *
+ * Restricts and renders fields to display for Solr results referencing test-mezzanine objects.
+ */
+function usc_mirc_usc_test_mezzanine_islandora_solr_object_result_alter(&$object_index, $query_processor) {
+  $docs = array();
+  $fields = array(
+    'pb_parent_title_Main_ms',
+    'pb_parent_description_summary_ms',
+    'concatted_date_mdt'
+  );
+  foreach ($object_index['solr_doc'] as $field => $value) {
+    if (in_array($field, $fields)) {
+      if ($field == 'pb_parent_title_Main_ms') {
+        $value = implode(', ', $value);
+        $value = l($value, $object_index['object_url']);
+      }
+      if ($field == 'concatted_date_mdt') {
+        foreach ($value as $key => $val) {
+          $value[$key] = format_date(strtotime(trim($value[$key])), 'custom', 'Y-m-d');
+        }
+      }
+      $docs[$field] = $value;
+    }
+  }
+  if (!empty($docs)) {
+    $object_index['solr_doc'] = $docs;
+  }
+}
+
+/**
+ * Implements hook_islandora_solr_results_alter().
+ *
+ * Sets a thumbnail URL. USC objects don't all have TN datastreams by default, so we check for a
+ * couple other potential image datastreams here. If the object has an image datastream, it gets
+ * passed through imagecache external.
+ */
+function usc_mirc_islandora_solr_results_alter(&$object_results, $query_processor) {
+  $image_ds = array('TN', 'IMG', 'JPG');
+  foreach ($object_results as $key => $object_result) {
+    $path = NULL;
+    foreach ($image_ds as $ds) {
+      if (in_array($ds, $object_result['datastreams'])) {
+        $path = 'islandora/object/' . $object_result['PID'] . '/datastream/' . $ds . '/view';
+        continue;
+      }
+    }
+    if (!empty($path)) {
+      $preset = variable_get('usc_mirc_solr_imagecache_thumbnail_preset', 'usc_solr_thumbnail');
+      // datastream image url
+      $path = url($path, array('absolute' => TRUE));
+      // path to local copy of the datastream image
+      $uri = imagecache_external_generate_path($path, $preset);
+      // path to image style generated from the local datastream image
+      $path = image_style_url($preset, $uri);
+      $object_results[$key]['thumbnail_url'] = $path;
+    }
+    else {
+      $object_results[$key]['thumbnail_url'] = drupal_get_path('module', 'islandora_solr') . '/images/defaultimg.png';
+    }
+  }
+}
+
+
