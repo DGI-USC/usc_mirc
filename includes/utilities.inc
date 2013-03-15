@@ -43,7 +43,7 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
     );
   }
   else {
-    return theme_image(array(
+    return theme('image', array(
       'path' => $image,
       'alt' => $alt,
       'title' => $title,
@@ -231,7 +231,7 @@ EOJS
 
   if (count($videos) > 0) {
     $output = array(
-      '#markup' => l(theme_image(array(
+      '#markup' => l(theme('image', array(
         "path" => "$mod_path/images/playbuttonblack.jpg",
         'alt' => 'Video placeholder',
         'attributes' => array(),
@@ -246,7 +246,7 @@ EOJS
   }
   else {
     $output = array(
-      '#markup' => theme_image(array("path" => "$mod_path/images/NoVideoAvailable.jpg", 'attributes' => array())),
+      '#markup' => theme('image', array("path" => "$mod_path/images/NoVideoAvailable.jpg", 'attributes' => array())),
     );
   }
   return drupal_render($output);
@@ -351,7 +351,7 @@ function usc_mirc_get_mezzanine_formats(&$form_state) {
       return array(
         '#type' => 'select',
         '#title' => t('Derivative format'),
-        '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('derivative types'), "admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via <a href=@link>derivative types</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
         '#options' => $format_options,
       );
     }
@@ -379,7 +379,7 @@ function usc_mirc_get_mezzanine_types(&$form_state) {
       return array(
         '#type' => 'select',
         '#title' => t('Derivative type'),
-        '#description' => t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('derivative formats'), "admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#description' => t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via <a href=@link>derivative formats</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
         '#options' => $type_options,
       );
     }
