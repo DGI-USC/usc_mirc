@@ -916,10 +916,6 @@ function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$obje
   );
   foreach ($object_index['solr_doc'] as $field => $value) {
     if (in_array($field, $fields)) {
-      if ($field == 'mods_title_s') {
-        $value = implode(', ', $value);
-        $value = l($value, $object_index['object_url']);
-      }
       if ($field == 'concatted_date_mdt') {
         foreach ($value as $key => $val) {
           $value[$key] = format_date(strtotime(trim($value[$key])), 'custom', 'Y-m-d');
@@ -947,10 +943,6 @@ function usc_mirc_usc_test_mezzanine_islandora_solr_object_result_alter(&$object
   );
   foreach ($object_index['solr_doc'] as $field => $value) {
     if (in_array($field, $fields)) {
-      if ($field == 'pb_parent_title_Main_ms') {
-        $value = implode(', ', $value);
-        $value = l($value, $object_index['object_url']);
-      }
       if ($field == 'concatted_date_mdt') {
         foreach ($value as $key => $val) {
           $value[$key] = format_date(strtotime(trim($value[$key])), 'custom', 'Y-m-d');
