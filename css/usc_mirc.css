@@ -26,3 +26,21 @@ fieldset.usc-mirc-fieldset {
     min-height: 385px;
     height: auto;
 }
+
+.islandora-solr-search-result .islandora-solr-search-result-inner {
+  display: inline-block;
+  width: 100%;
+  padding: 10px 10px 4px;
+}
+
+.islandora-solr-search-result.odd {
+  background-color: #f3f3f3;
+}
+
+.islandora-solr-search-result.even {
+  background-color: #f9f9f9;
+}
+
+.islandora-solr-search-result dl.solr-fields {
+  border-top: 0;
+}
