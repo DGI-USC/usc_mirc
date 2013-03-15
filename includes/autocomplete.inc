@@ -2,11 +2,10 @@
 /**
  * @file
  * Autocomplete for the usc_mirc module.
- *
  */
 
 /**
- * Array_filter callback to find filenames which (should) represent a video file.
+ * Array_filter callback to find filenames which represent a video file.
  */
 function usc_mirc_is_video_filename($filename) {
   static $exts = NULL;
@@ -17,9 +16,10 @@ function usc_mirc_is_video_filename($filename) {
 }
 
 /**
- *  Get an array of all the files in this directory (including subdirectories
- *    if $recurse is TRUE).
- *  XXX:  This could be made a great deal more efficient in the case of a deep hierarchy, but anyway.
+ * Get an array of the files in this directory. Includes subdirs when $recurse.
+ *
+ * XXX:  This could be made a great deal more efficient in the case of a deep
+ *  hierarchy, but anyway.
  */
 function usc_mirc_traverse_directory($url_base, $filesystem_base, $string, $sub_dir = '.', $recurse = TRUE) {
   $videos = array();
@@ -45,7 +45,8 @@ function usc_mirc_traverse_directory($url_base, $filesystem_base, $string, $sub_
         if ($recurse && is_dir("$filesystem_base/$this_entry")) {
           $videos = array_merge($videos, usc_mirc_traverse_directory($url_base, $filesystem_base, $string, $this_entry, $recurse));
         }
-        elseif ($string === '*' || strpos($entry, $string) === 0) { //XXX:  Should probably get rid of the wildcard.
+        // XXX:  Should probably get rid of the wildcard.
+        elseif ($string === '*' || strpos($entry, $string) === 0) {
           $videos["$url_base/$this_entry"] = $entry;
         }
       }

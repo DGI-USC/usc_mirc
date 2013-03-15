@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file
+ * Install file for the MIRC@SC module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function usc_mirc_install() {
+  $types = array(
+    'original' => 'Original',
+    'edited' => 'Edited',
+  );
+
+  $formats = array(
+    'edge-to-edge' => 'Edge-to-edge/Full frame (including perfs)',
+    'cropped' => 'Cropped',
+  );
+  $type_vocab = array(
+    'name' => 'Derivative Type',
+    'machine_name' => 'usc_mirc_mezzanine_type_vocab',
+    'description' => 'Whether this mezzanine is edited, or so on.',
+  );
+  taxonomy_vocabulary_save((object) $type_vocab);
+
+  $format_vocab = array(
+    'name' => 'Derivative Format',
+    'machine_name' => 'usc_mirc_mezzanine_format_vocab',
+    'description' => 'Whether this mezzanine is edge-to-edge, cropped, or so on.',
+  );
+  taxonomy_vocabulary_save((object) $format_vocab);
+
+  $type_taxonomy = taxonomy_vocabulary_machine_name_load('usc_mirc_mezzanine_type_vocab');
+  $format_taxonomy = taxonomy_vocabulary_machine_name_load('usc_mirc_mezzanine_format_vocab');
+
+  foreach ($types as $key => $type) {
+    taxonomy_term_save((object) array(
+      'name' => $type,
+      'vid' => $type_taxonomy->vid,
+      'vocabulary_machine_name' => $key,
+    ));
+  }
+
+  foreach ($formats as $key => $format) {
+    taxonomy_term_save((object) array(
+      'name' => $format,
+      'vid' => $format_taxonomy->vid,
+      'vocabulary_machine_name' => $key,
+    ));
+  }
+}
