@@ -1,36 +1,36 @@
 div.usc-collection-image img {
-    float:right;
+  float: right;
 }
 
 ul.usc-collection-view li {
-    float: left;
-    height: 220px;
-    list-style: none outside none;
-    width: 33%;
+  float: left;
+  height: 220px;
+  list-style: none outside none;
+  width: 33%;
 }
 
 ul.usc-collection-view li a {
-    float: left;
-    width: 200px;
+  float: left;
+  width: 200px;
 }
 
 a.usc-flowplayer {
-    display: block;
-    width: 480px;
-    height: 360px;
+  display: block;
+  height: 360px;
+  width: 480px;
 }
 
 fieldset.usc-mirc-fieldset {
-    float: left;
-    max-width: 400px;
-    min-height: 385px;
-    height: auto;
+  float: left;
+  height: auto;
+  max-width: 400px;
+  min-height: 385px;
 }
 
 .islandora-solr-search-result .islandora-solr-search-result-inner {
   display: inline-block;
-  width: 100%;
   padding: 10px 10px 4px;
+  width: 100%;
 }
 
 .islandora-solr-search-result.odd {

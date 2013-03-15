@@ -1,26 +1,34 @@
 <?php
 
+/**
+ * @file
+ * Install file for the MIRC@SC module.
+ */
+
+/**
+ * Implements hook_install().
+ */
 function usc_mirc_install() {
   $types = array(
-    'original' => t('Original'),
-    'edited' => t('Edited'),
+    'original' => 'Original',
+    'edited' => 'Edited',
   );
 
   $formats = array(
-    'edge-to-edge' => t('Edge-to-edge/Full frame (including perfs)'),
-    'cropped' => t('Cropped'),
+    'edge-to-edge' => 'Edge-to-edge/Full frame (including perfs)',
+    'cropped' => 'Cropped',
   );
   $type_vocab = array(
     'name' => 'Derivative Type',
     'machine_name' => 'usc_mirc_mezzanine_type_vocab',
-    'description' => t('Whether this mezzanine is edited, or so on.'),
+    'description' => 'Whether this mezzanine is edited, or so on.',
   );
   taxonomy_vocabulary_save((object) $type_vocab);
 
   $format_vocab = array(
     'name' => 'Derivative Format',
     'machine_name' => 'usc_mirc_mezzanine_format_vocab',
-    'description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on.'),
+    'description' => 'Whether this mezzanine is edge-to-edge, cropped, or so on.',
   );
   taxonomy_vocabulary_save((object) $format_vocab);
 

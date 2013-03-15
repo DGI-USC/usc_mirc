@@ -2,15 +2,19 @@
 /**
  * @file
  * Admin form for usc_mirc.
- *
  */
 
 /**
  * Admin settings form for the MIRC@SC module.
  *
  * @param array $form
- * @param type $form_state
- * @return type
+ *   A Drupal form.
+ *
+ * @param array $form_state
+ *   The Drupal form state.
+ *
+ * @return array
+ *   The admin form.
  */
 function usc_mirc_admin_settings($form, &$form_state) {
   $image_styles = image_styles();
@@ -31,7 +35,7 @@ function usc_mirc_admin_settings($form, &$form_state) {
       '#default_value' => variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail'),
       '#options' => $image_styles,
     ),
-   'usc_mirc_solr_imagecache_thumbnail_preset' => array(
+    'usc_mirc_solr_imagecache_thumbnail_preset' => array(
       '#type' => 'select',
       '#title' => t('Solr Result Thumbnail Imagecache preset'),
       '#description' => t('The preset with which thumbnails will be created.'),
@@ -53,7 +57,7 @@ function usc_mirc_admin_settings($form, &$form_state) {
           '#description' => t('URL (possibly with port and path), without a terminiating slash. (Used during access copy autocompletion)'),
           '#default_value' => variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu'),
         ),
-      ' usc_mirc_streaming_folder' => array(
+        'usc_mirc_streaming_folder' => array(
           '#type' => 'textfield',
           '#title' => t('Streaming folder'),
           '#description' => t('Mountpoint/folder on server under which the streaming access copies are located. (Used during access copy autocompletion)'),
