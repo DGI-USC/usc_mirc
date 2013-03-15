@@ -1,9 +1,26 @@
 <?php
 /**
  * @file
- *
  * Utilities used in the MIRC@SC module.
+ */
+
+/**
+ * Retrieves the image markup for an object.
  *
+ * @param string $pid
+ *   The PID of the object.
+ *
+ * @param string $alt
+ *   Text to be displayed as an alt.
+ *
+ * @param string $title
+ *   Title of the image.
+ *
+ * @param string $imagecache_preset
+ *   The Imagecache External preset we are to use.
+ *
+ * @return string
+ *   Markup for the generated image.
  */
 function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_preset = NULL) {
   $object = islandora_object_load($pid);
@@ -19,21 +36,40 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
   $image = "islandora/object/$pid/datastream/$dsid/view";
 
   if (module_exists('imagecache_external') && is_callable('theme_imagecache_external')) {
-    return theme('imagecache_external', array('path' => url($image, array('absolute' => TRUE)), 'style_name' => $imagecache_preset, 'alt' => 'Collection image'));
+    return theme('imagecache_external', array(
+      'path' => url($image, array('absolute' => TRUE)),
+      'style_name' => $imagecache_preset,
+      'alt' => 'Collection image')
+    );
   }
   else {
-    return theme_image(array('path' => $image, 'alt' => $alt, 'title' => $title, 'attributes' => array()));
+    return theme('image', array(
+      'path' => $image,
+      'alt' => $alt,
+      'title' => $title,
+      'attributes' => array(),
+      )
+     );
   }
 }
 
 /**
  * Performs a SPARQL query to retrieve a collection set.
  *
- * @param type $object
- * @param type $page
- * @param type $number
- * @param type $mezzanines
- * @return type
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @param int $page
+ *   The page number we are to start at.
+ *
+ * @param int $number
+ *   Number of items per page.
+ *
+ * @param bool $mezzanines
+ *   Whether we are searching mezzanines.
+ *
+ * @return array
+ *   Results from the collection set query.
  */
 function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanines = TRUE) {
   $offset = $page * $number;
@@ -66,7 +102,7 @@ function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanin
     'query' => $query,
     'type' => 'sparql',
     'page_size' => $page,
-    'page_number' => $number
+    'page_number' => $number,
   );
   $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
   return $results;
@@ -75,9 +111,14 @@ function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanin
 /**
  * Performs a SPARQL query to get number of children of an object.
  *
- * @param type $object
- * @param type $mezzanines
- * @return type
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @param bool $mezzanines
+ *   Whether we are searching mezzanines or not.
+ *
+ * @return int
+ *   The number of children found.
  */
 function usc_mirc_get_number_of_children($object, $mezzanines = TRUE) {
   $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
@@ -109,8 +150,11 @@ function usc_mirc_get_number_of_children($object, $mezzanines = TRUE) {
 /**
  * Performs a SPARQL query to retrieve the parent of a mezzanine object.
  *
- * @param type $object
- * @return boolean
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @return mixed
+ *   A bool if it has no parent, or the parent pid otherwise.
  */
 function usc_mirc_get_mezzanine_parent($object) {
   $vro_cmodel = 'usc:test-vro';
@@ -144,74 +188,88 @@ function usc_mirc_get_mezzanine_parent($object) {
  * Adds the flowplayer markup to the current page.
  *
  * @global type $base_url
- * @param type $videos
- * @return type
+ *
+ * @param array $videos
+ *   An array of videos that are returned via query. We will only markup the
+ *   first one.
+ *
+ * @return string
+ *   Flowplayer markup.
  */
 function usc_mirc_mezzanine_player_markup($videos) {
   global $base_url;
   $mod_path = drupal_get_path('module', 'usc_mirc');
-    drupal_add_js("$mod_path/lib/flowplayer/flowplayer-3.2.8.min.js", array('group' => JS_LIBRARY));
+  drupal_add_js("$mod_path/lib/flowplayer/flowplayer-3.2.8.min.js", array('group' => JS_LIBRARY));
 
-    $player_class = 'usc-flowplayer';
-    drupal_add_js(<<<EOJS
-jQuery(function() {
-  jQuery('.$player_class').flowplayer("$base_url/$mod_path/lib/flowplayer/flowplayer.commercial-3.2.8.swf", {
+  $player_class = 'usc-flowplayer';
+  drupal_add_js(<<<EOJS
+  jQuery(function() {
+    jQuery('.$player_class').flowplayer("$base_url/$mod_path/lib/flowplayer/flowplayer.commercial-3.2.8.swf", {
 
-    //Product key (for sc.edu)
-    key: "#\$60fe88f4c446bc34a1c",
+      //Product key (for sc.edu)
+      key: "#\$60fe88f4c446bc34a1c",
 
-    clip: {
-      provider: 'lighttpd', // configure clip to use "lighthttpd" plugin for providing video data
-      scaling: 'fit', //Maintain aspect ratio when scaling
-    },
-    canvas: { //Use a full-black background
-      background: '#000000',
-      backgroundGradient: 'none',
-    },
+      clip: {
+        provider: 'lighttpd', // configure clip to use "lighthttpd" plugin for providing video data
+        scaling: 'fit', //Maintain aspect ratio when scaling
+      },
+      canvas: { //Use a full-black background
+        background: '#000000',
+        backgroundGradient: 'none',
+      },
 
-    // streaming plugins are configured normally under the plugins node
-    plugins: {
-      lighttpd: {
-        url: 'flowplayer.pseudostreaming-3.2.8.swf'
+      // streaming plugins are configured normally under the plugins node
+      plugins: {
+        lighttpd: {
+          url: 'flowplayer.pseudostreaming-3.2.8.swf'
+        }
       }
-    }
-  })
-});
+    })
+  });
 EOJS
-, array('type' => 'inline'));
+  , array('type' => 'inline'));
 
-    if (count($videos) > 0) {
-      $output = array(
-        '#markup' => l(theme_image(array("path" => "$mod_path/images/playbuttonblack.jpg", 'alt' => 'Video placeholder', 'attributes' => array())), $videos[0],
-          array(
-            'html' => TRUE,
-            'attributes' => array(
-              'class' => array($player_class),
-             ),
-          )),
-      );
-    }
-    else {
-      $output = array(
-        '#markup' => theme_image(array("path" => "$mod_path/images/NoVideoAvailable.jpg", 'attributes' => array())),
-      );
-    }
-    return drupal_render($output);
+  if (count($videos) > 0) {
+    $output = array(
+      '#markup' => l(theme('image', array(
+        "path" => "$mod_path/images/playbuttonblack.jpg",
+        'alt' => 'Video placeholder',
+        'attributes' => array(),
+        )), $videos[0],
+        array(
+          'html' => TRUE,
+          'attributes' => array(
+            'class' => array($player_class),
+          ),
+        )),
+    );
+  }
+  else {
+    $output = array(
+      '#markup' => theme('image', array("path" => "$mod_path/images/NoVideoAvailable.jpg", 'attributes' => array())),
+    );
+  }
+  return drupal_render($output);
 }
 
 /**
  * Performs a SPARQL query to retrieve derivatives of an object.
  *
- * @param type $object
- * @param type $subject
- * @return type
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @param string $subject
+ *   The subject we are searching for in SPARQL.
+ *
+ * @return array
+ *   The result set.
  */
 function usc_mirc_get_derivatives($object, $subject = NULL) {
   if ($subject === NULL) {
     $def_rel = variable_get('usc_mirc_relationship', 'isDerivativeOf');
     $subject = "?subject fre:$def_rel <info:fedora/$object->id>";
   }
-  //perform query
+  // Perform query.
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
   SELECT ?subject ?label
@@ -229,10 +287,13 @@ function usc_mirc_get_derivatives($object, $subject = NULL) {
 }
 
 /**
- * Performs a SPARQL query to build a breadcrumb link back to the parent of the object.
+ * Performs a SPARQL query to build a breadcrumb link back to the parent object.
  *
- * @param type $object
- * @return type
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @return string
+ *   Markup containing the link to the object.
  */
 function usc_mirc_build_breadcrumb($object) {
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:test-vro');
@@ -272,69 +333,55 @@ function usc_mirc_build_breadcrumb($object) {
 /**
  * Retrieves a list of mezzanine formats from the taxonomy.
  *
- * @param type $form_state
- * @return type
+ * @param array $form_state
+ *   The Drupal form state.
+ *
+ * @return array
+ *   An array containing the options retrieved from the taxonomy.
  */
 function usc_mirc_get_mezzanine_formats(&$form_state) {
-  if (module_exists('taxonomy')) {
-    $vocabs = taxonomy_get_vocabularies();
-    foreach ($vocabs as $id => $voc) {
-      if ($voc->name == variable_get('usc_mirc_mezzanine_format_vocab', 'usc_mirc_mezzanine_format_vocab')) {
-        return _taxonomy_term_select(
-          t('Derivative format'),
-          NULL,
-          $form_state['values']['derivative_format'],
-          $id,
-          t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('the format taxonomy vocab'), "admin/content/taxonomy/edit/vocabulary/$id"))),
-          FALSE,
-          NULL
-        );
+  $vocabs = taxonomy_get_vocabularies();
+  foreach ($vocabs as $id => $voc) {
+    if ($voc->machine_name == variable_get('usc_mirc_mezzanine_format_vocab', 'usc_mirc_mezzanine_format_vocab')) {
+      $format_options = array();
+      $format_tree = taxonomy_get_tree($voc->vid);
+      foreach ($format_tree as $term) {
+        $format_options[$term->name] = $term->name;
       }
+      return array(
+        '#type' => 'select',
+        '#title' => t('Derivative format'),
+        '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via <a href=@link>derivative types</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#options' => $format_options,
+      );
     }
   }
-
-  return array(
-    '#type' => 'select',
-    '#title' => t('Derivative format'),
-    '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on.'),
-    '#options' => array(
-      'edge-to-edge' => t('Edge-to-edge/Full frame (including perfs)'),
-      'cropped' => t('Cropped'),
-    ),
-  );
 }
 
 /**
  * Retrieves the types of mezzanines from the taxonomy.
  *
- * @param type $form_state
- * @return type
+ * @param array $form_state
+ *   The Drupal form state.
+ *
+ * @return array
+ *   An array containing the options retrieved from the taxonomy.
  */
 function usc_mirc_get_mezzanine_types(&$form_state) {
-  if (module_exists('taxonomy')) {
-    $vocabs = taxonomy_get_vocabularies();
-    foreach ($vocabs as $id => $voc) {
-      if ($voc->name == variable_get('usc_mirc_mezzanine_type_vocab', 'usc_mirc_mezzanine_type_vocab')) {
-        return _taxonomy_term_select(
-          t('Derivative type'),
-          NULL,
-          $form_state['values']['derivative_type'],
-          $id,
-          t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('the type taxonomy vocab'), "admin/content/taxonomy/edit/vocabulary/$id"))),
-          FALSE,
-          NULL
-        );
+  $vocabs = taxonomy_get_vocabularies();
+  foreach ($vocabs as $id => $voc) {
+    if ($voc->machine_name == variable_get('usc_mirc_mezzanine_type_vocab', 'usc_mirc_mezzanine_type_vocab')) {
+      $type_options = array();
+      $type_tree = taxonomy_get_tree($voc->vid);
+      foreach ($type_tree as $term) {
+        $type_options[$term->name] = $term->name;
       }
+      return array(
+        '#type' => 'select',
+        '#title' => t('Derivative type'),
+        '#description' => t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via <a href=@link>derivative formats</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#options' => $type_options,
+      );
     }
   }
-
-  return array(
-    '#type' => 'select',
-    '#title' => t('Derivative type'),
-    '#description' => t('Whether this mezzanine is edited, or so on.'),
-    '#options' => array( //TODO: Built list programatically... Allow user configurable values (changable in admin form?)
-      'original' => t('Original'),
-      'edited' => t('Edited'),
-    ),
-  );
 }
