@@ -346,7 +346,6 @@ function usc_mirc_get_mezzanine_formats(&$form_state) {
       $format_options = array();
       $format_tree = taxonomy_get_tree($voc->vid);
       foreach ($format_tree as $term) {
-        dd($term);
         $format_options[$term->name] = $term->name;
       }
       return array(
