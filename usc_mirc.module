@@ -1,7 +1,6 @@
 <?php
 /**
  * @file
- *
  * Module used to house customizations for MIRC@SC.
  *
  */
@@ -672,15 +671,6 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
       $pbcore_doc = $pbcore_xpath->document;
       $pbcore_xpath->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
 
-      if (is_callable('taxonomy_get_term')) {
-        if ($f = taxonomy_get_term($values['derivative_format'])) {
-          $values['derivative_format'] = $f->name;
-        }
-        if ($t = taxonomy_get_term($values['derivative_type'])) {
-          $values['derivative_type'] = $t->name;
-        }
-      }
-
       // Add the title, type and format fields
       $title =  $parent_object->label;
       $form_state['storage']['usc_mirc']['title'] = $title;
@@ -912,7 +902,7 @@ function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$obje
   $fields = array(
     'mods_title_s',
     'mods_abstract_ms',
-    'concatted_date_mdt'  
+    'concatted_date_mdt'
   );
   foreach ($object_index['solr_doc'] as $field => $value) {
     if (in_array($field, $fields)) {

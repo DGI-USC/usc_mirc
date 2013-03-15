@@ -276,32 +276,23 @@ function usc_mirc_build_breadcrumb($object) {
  * @return type
  */
 function usc_mirc_get_mezzanine_formats(&$form_state) {
-  if (module_exists('taxonomy')) {
-    $vocabs = taxonomy_get_vocabularies();
-    foreach ($vocabs as $id => $voc) {
-      if ($voc->name == variable_get('usc_mirc_mezzanine_format_vocab', 'usc_mirc_mezzanine_format_vocab')) {
-        return _taxonomy_term_select(
-          t('Derivative format'),
-          NULL,
-          $form_state['values']['derivative_format'],
-          $id,
-          t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('the format taxonomy vocab'), "admin/content/taxonomy/edit/vocabulary/$id"))),
-          FALSE,
-          NULL
-        );
+  $vocabs = taxonomy_get_vocabularies();
+  foreach ($vocabs as $id => $voc) {
+    if ($voc->machine_name == variable_get('usc_mirc_mezzanine_format_vocab', 'usc_mirc_mezzanine_format_vocab')) {
+      $format_options = array();
+      $format_tree = taxonomy_get_tree($voc->vid);
+      foreach ($format_tree as $term) {
+        dd($term);
+        $format_options[$term->name] = $term->name;
       }
+      return array(
+        '#type' => 'select',
+        '#title' => t('Derivative format'),
+        '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('derivative types'), "admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#options' => $format_options,
+      );
     }
   }
-
-  return array(
-    '#type' => 'select',
-    '#title' => t('Derivative format'),
-    '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on.'),
-    '#options' => array(
-      'edge-to-edge' => t('Edge-to-edge/Full frame (including perfs)'),
-      'cropped' => t('Cropped'),
-    ),
-  );
 }
 
 /**
@@ -311,30 +302,21 @@ function usc_mirc_get_mezzanine_formats(&$form_state) {
  * @return type
  */
 function usc_mirc_get_mezzanine_types(&$form_state) {
-  if (module_exists('taxonomy')) {
-    $vocabs = taxonomy_get_vocabularies();
-    foreach ($vocabs as $id => $voc) {
-      if ($voc->name == variable_get('usc_mirc_mezzanine_type_vocab', 'usc_mirc_mezzanine_type_vocab')) {
-        return _taxonomy_term_select(
-          t('Derivative type'),
-          NULL,
-          $form_state['values']['derivative_type'],
-          $id,
-          t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('the type taxonomy vocab'), "admin/content/taxonomy/edit/vocabulary/$id"))),
-          FALSE,
-          NULL
-        );
+  $vocabs = taxonomy_get_vocabularies();
+  foreach ($vocabs as $id => $voc) {
+    if ($voc->machine_name == variable_get('usc_mirc_mezzanine_type_vocab', 'usc_mirc_mezzanine_type_vocab')) {
+      $type_options = array();
+      $type_tree = taxonomy_get_tree($voc->vid);
+      foreach ($type_tree as $term) {
+        $type_options[$term->name] = $term->name;
       }
+      return array(
+        '#type' => 'select',
+        '#title' => t('Derivative type'),
+        '#description' => t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via !link)', array('!link' => l(t('derivative formats'), "admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#options' => $type_options,
+      );
     }
   }
-
-  return array(
-    '#type' => 'select',
-    '#title' => t('Derivative type'),
-    '#description' => t('Whether this mezzanine is edited, or so on.'),
-    '#options' => array( //TODO: Built list programatically... Allow user configurable values (changable in admin form?)
-      'original' => t('Original'),
-      'edited' => t('Edited'),
-    ),
-  );
 }
+
