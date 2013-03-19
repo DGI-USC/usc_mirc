@@ -363,7 +363,7 @@ function usc_mirc_islandora_xml_form_builder_forms() {
 /**
  * Implements hook_CMODEL_islandora_view_object().
  */
-function usc_mirc_usc_vroCModel_islandora_view_object($object) {
+function usc_mirc_usc_vrocmodel_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $output = array(
     'metadata' => usc_mirc_metadata_markup($object),
@@ -377,7 +377,7 @@ function usc_mirc_usc_vroCModel_islandora_view_object($object) {
 /**
  * Implements hook_CMODEL_islandora_view_object().
  */
-function usc_mirc_usc_collectionCModel_islandora_view_object($object) {
+function usc_mirc_usc_collectioncmodel_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $form = array(
     'collection_metadata' => array(
@@ -415,7 +415,7 @@ function usc_mirc_usc_collectionCModel_islandora_view_object($object) {
 /**
  * Implements hook_CMODEL_islandora_view_object().
  */
-function usc_mirc_usc_mezzanineCModel_islandora_view_object($object) {
+function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $output = array();
   $output['mezzanine_display'] = array(
@@ -1086,7 +1086,7 @@ function usc_mirc_image_default_styles() {
  * Restricts and renders fields to display for Solr results referencing
  * collection objects.
  */
-function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
+function usc_mirc_usc_collectioncmodel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
   $docs = array();
   $fields = array(
     'mods_title_s',
@@ -1114,7 +1114,7 @@ function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$obje
  * Restricts and renders fields to display for Solr results referencing
  * mezzanineCModel objects.
  */
-function usc_mirc_usc_mezzanineCModel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
+function usc_mirc_usc_mezzaninecmodel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
   $docs = array();
   $fields = array(
     'pb_parent_title_Main_ms',
