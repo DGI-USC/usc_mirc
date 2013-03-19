@@ -351,7 +351,7 @@ function usc_mirc_get_mezzanine_formats(&$form_state) {
       return array(
         '#type' => 'select',
         '#title' => t('Derivative format'),
-        '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via <a href=@link>derivative types</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via <a href=@link>derivative formats</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
         '#options' => $format_options,
       );
     }
@@ -379,7 +379,7 @@ function usc_mirc_get_mezzanine_types(&$form_state) {
       return array(
         '#type' => 'select',
         '#title' => t('Derivative type'),
-        '#description' => t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via <a href=@link>derivative formats</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#description' => t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via <a href=@link>derivative types</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
         '#options' => $type_options,
       );
     }
