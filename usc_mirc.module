@@ -26,7 +26,7 @@ function usc_mirc_menu() {
     'access arguments' => array('administer usc_mirc'),
     'file' => 'includes/admin.inc',
   );
-  $items['islandora/object/%islandora_object/manage/datastreams/usc-mirc-ingest'] = array(
+  $items['islandora/object/%islandora_object/manage/overview/usc-mirc-ingest'] = array(
     'title callback' => 'usc_mirc_retrieve_ingest_title',
     'title arguments' => array(2),
     'access callback' => 'usc_mirc_ingest_access',
@@ -64,6 +64,26 @@ function usc_mirc_menu() {
 function usc_mirc_menu_alter(&$items) {
   // Move the manage tab to be the last tab.
   $items['islandora/object/%islandora_object/manage']['weight'] = 10;
+  $items['islandora/object/%islandora_object/manage/collection']['access callback'] = 'usc_mirc_collection_tab_access';
+}
+
+/**
+ * Determine whether or not to show this modules manage tab.
+ *
+ * @param FedoraObject $object
+ *   The object being managed.
+ *
+ * @return bool
+ *   TRUE if it should be shown, and FALSE if it should not be shown.
+ */
+function usc_mirc_collection_tab_access($object = NULL) {
+  if (!is_object($object) || !in_array('islandora:collectionCModel', $object->models) || !$object['COLLECTION_POLICY']) {
+  return FALSE;
+  }
+  return islandora_basic_collection_ingest_child_collection_access($object) ||
+    user_access(MANAGE_COLLECTION_POLICY) ||
+    user_access(MIGRATE_COLLECTION_MEMBERS) ||
+    islandora_basic_collection_ingest_access($object);
 }
 
 /**
@@ -79,6 +99,8 @@ function usc_mirc_permission() {
     ),
   );
 }
+
+
 
 /**
  * Determines whether the user has access to ingest new objects or not.
