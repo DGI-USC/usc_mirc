@@ -75,8 +75,8 @@ function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanin
   $offset = $page * $number;
   $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
   $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
-  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:test-vro');
-  $mezzanine_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine');
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
+  $mezzanine_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel');
 
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
@@ -123,8 +123,8 @@ function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanin
 function usc_mirc_get_number_of_children($object, $mezzanines = TRUE) {
   $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
   $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
-  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:test-vro');
-  $mezzanine_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine');
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
+  $mezzanine_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel');
 
   $query = "
   PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
@@ -157,7 +157,7 @@ function usc_mirc_get_number_of_children($object, $mezzanines = TRUE) {
  *   A bool if it has no parent, or the parent pid otherwise.
  */
 function usc_mirc_get_mezzanine_parent($object) {
-  $vro_cmodel = 'usc:test-vro';
+  $vro_cmodel = 'usc:vroCModel';
   $def_rel = variable_get('usc_mirc_relationship', 'isDerivativeOf');
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
@@ -296,8 +296,8 @@ function usc_mirc_get_derivatives($object, $subject = NULL) {
  *   Markup containing the link to the object.
  */
 function usc_mirc_build_breadcrumb($object) {
-  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:test-vro');
-  $mezz_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine');
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
+  $mezz_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel');
   $pid = $object->id;
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
@@ -351,7 +351,7 @@ function usc_mirc_get_mezzanine_formats(&$form_state) {
       return array(
         '#type' => 'select',
         '#title' => t('Derivative format'),
-        '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via <a href=@link>derivative types</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#description' => t('Whether this mezzanine is edge-to-edge, cropped, or so on. (This list can be edited/expanded on via <a href=@link>derivative formats</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
         '#options' => $format_options,
       );
     }
@@ -379,7 +379,7 @@ function usc_mirc_get_mezzanine_types(&$form_state) {
       return array(
         '#type' => 'select',
         '#title' => t('Derivative type'),
-        '#description' => t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via <a href=@link>derivative formats</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
+        '#description' => t('Whether this mezzanine is edited, or so on. (This list can be edited/expanded on via <a href=@link>derivative types</a>)', array('@link' => url("admin/structure/taxonomy/$voc->machine_name/add"))),
         '#options' => $type_options,
       );
     }

@@ -26,7 +26,7 @@ function usc_mirc_menu() {
     'access arguments' => array('administer usc_mirc'),
     'file' => 'includes/admin.inc',
   );
-  $items['islandora/object/%islandora_object/manage/datastreams/usc-mirc-ingest'] = array(
+  $items['islandora/object/%islandora_object/manage/overview/usc-mirc-ingest'] = array(
     'title callback' => 'usc_mirc_retrieve_ingest_title',
     'title arguments' => array(2),
     'access callback' => 'usc_mirc_ingest_access',
@@ -64,6 +64,26 @@ function usc_mirc_menu() {
 function usc_mirc_menu_alter(&$items) {
   // Move the manage tab to be the last tab.
   $items['islandora/object/%islandora_object/manage']['weight'] = 10;
+  $items['islandora/object/%islandora_object/manage/collection']['access callback'] = 'usc_mirc_collection_tab_access';
+}
+
+/**
+ * Determine whether or not to show this modules manage tab.
+ *
+ * @param FedoraObject $object
+ *   The object being managed.
+ *
+ * @return bool
+ *   TRUE if it should be shown, and FALSE if it should not be shown.
+ */
+function usc_mirc_collection_tab_access($object = NULL) {
+  if (!is_object($object) || !in_array('islandora:collectionCModel', $object->models) || !$object['COLLECTION_POLICY']) {
+  return FALSE;
+  }
+  return islandora_basic_collection_ingest_child_collection_access($object) ||
+    user_access(MANAGE_COLLECTION_POLICY) ||
+    user_access(MIGRATE_COLLECTION_MEMBERS) ||
+    islandora_basic_collection_ingest_access($object);
 }
 
 /**
@@ -80,6 +100,8 @@ function usc_mirc_permission() {
   );
 }
 
+
+
 /**
  * Determines whether the user has access to ingest new objects or not.
  *
@@ -92,9 +114,9 @@ function usc_mirc_permission() {
 function usc_mirc_ingest_access(FedoraObject $object) {
   $usc_models = array(
     'usc:mirc',
-    'usc:test-mezzanine',
+    'usc:mezzanineCModel',
     'usc:collectionCModel',
-    'usc:test-vro',
+    'usc:vroCModel',
   );
 
   if (user_access('administer usc_mirc')) {
@@ -132,7 +154,7 @@ function usc_mirc_ingest_page(FedoraObject $object) {
       )
     );
   }
-  elseif (in_array('usc:test-mezzanine', $object->models)) {
+  elseif (in_array('usc:mezzanineCModel', $object->models)) {
     drupal_set_title(t('Add a new access variant'));
     return drupal_get_form('usc_mirc_add_access_variant_form', $object->id);
   }
@@ -141,11 +163,11 @@ function usc_mirc_ingest_page(FedoraObject $object) {
     return drupal_get_form('islandora_ingest_form', array(
         'namespace' => 'usc-mirc',
         'collections' => array($object->id),
-        'models' => array('usc:test-vro'),
+        'models' => array('usc:vroCModel'),
       )
     );
   }
-  elseif (in_array('usc:test-vro', $object->models)) {
+  elseif (in_array('usc:vroCModel', $object->models)) {
     drupal_set_title(t('Add a new mezzanine'));
     return drupal_get_form('usc_mirc_add_mezzanine_form', $object->id);
   }
@@ -164,13 +186,13 @@ function usc_mirc_retrieve_ingest_title(FedoraObject $object) {
   if ($object->id === 'usc:mirc') {
     return t('Add a new subcollection');
   }
-  elseif (in_array('usc:test-mezzanine', $object->models)) {
+  elseif (in_array('usc:mezzanineCModel', $object->models)) {
     return t('Add a new access variant');
   }
   elseif (in_array('usc:collectionCModel', $object->models)) {
     return t('Add a new preservation master');
   }
-  elseif (in_array('usc:test-vro', $object->models)) {
+  elseif (in_array('usc:vroCModel', $object->models)) {
     return t('Add a new mezzanine');
   }
 }
@@ -199,6 +221,78 @@ function usc_mirc_preservation_tab_access($object) {
 }
 
 /**
+* Implements hook_islandora_required_objects().
+*/
+function usc_mirc_islandora_required_objects(IslandoraTuque $connection) {
+  $module_path = drupal_get_path('module', 'usc_mirc');
+
+  // USC Root Collection.
+  $usc_root_collection = $connection->repository->constructObject('usc:mirc');
+  $usc_root_collection->owner = 'fedoraAdmin';
+  $usc_root_collection->label = 'Moving Image Research Collections';
+  $usc_root_collection->models = 'islandora:collectionCModel';
+  $usc_root_collection->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:root');
+
+  // USC Subcollection.
+  $usc_collection = $connection->repository->constructObject('usc:collectionCModel');
+  $usc_collection->owner = 'fedoraAdmin';
+  $usc_collection->label = 'USC Video Collection Content Model';
+  $usc_collection->models = 'islandora:collectionCModel';
+  $datastream = $usc_collection->constructDatastream('DS-COMPOSITE-MODEL', 'X');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/data/datastreams/usc_collectionCModel/DS-COMPOSITE-MODEL.xml", FALSE);
+  $usc_collection->ingestDatastream($datastream);
+
+  // USC Access Variants.
+  $usc_access = $connection->repository->constructObject('usc:accessCModel');
+  $usc_access->owner = 'fedoraAdmin';
+  $usc_access->label = 'USC Access Object Content Model';
+  $usc_access->models = 'fedora-system:ContentModel-3.0';
+  $datastream = $usc_access->constructDatastream('DS-COMPOSITE-MODEL', 'X');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/data/datastreams/usc_accessCModel/DS-COMPOSITE-MODEL.xml", FALSE);
+  $usc_access->ingestDatastream($datastream);
+
+  // USC VROs.
+  $usc_vro = $connection->repository->constructObject('usc:vroCModel');
+  $usc_vro->owner = 'fedoraAdmin';
+  $usc_vro->label = 'USC Video Resource Object Content Model';
+  $usc_vro->models = 'fedora-system:ContentModel-3.0';
+  $datastream = $usc_vro->constructDatastream('DS-COMPOSITE-MODEL', 'X');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/data/datastreams/usc_vroCModel/DS-COMPOSITE-MODEL.xml", FALSE);
+  $usc_vro->ingestDatastream($datastream);
+
+  // USC Mezzanines.
+  $usc_mezzanine = $connection->repository->constructObject('usc:mezzanineCModel');
+  $usc_mezzanine->owner = 'fedoraAdmin';
+  $usc_mezzanine->label = 'USC Mezzanine Object Content Model';
+  $usc_mezzanine->models = 'fedora-system:ContentModel-3.0';
+  $datastream = $usc_mezzanine->constructDatastream('DS-COMPOSITE-MODEL', 'X');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/data/datastreams/usc_mezzanineCModel/DS-COMPOSITE-MODEL.xml", FALSE);
+  $usc_mezzanine->ingestDatastream($datastream);
+
+
+  return array(
+    'MIRC@SC' => array(
+      'title' => 'MIRC@SC',
+      'objects' => array(
+        $usc_root_collection,
+        $usc_collection,
+        $usc_access,
+        $usc_vro,
+        $usc_mezzanine,
+      ),
+    ),
+  );
+}
+
+/**
  * Implements hook_islandora_xml_form_builder_form_associations().
  */
 function usc_mirc_islandora_xml_form_builder_form_associations() {
@@ -212,7 +306,7 @@ function usc_mirc_islandora_xml_form_builder_form_associations() {
       'template' => FALSE,
     ),
     'usc_pbcore_preservation_location' => array(
-      'content_model' => 'usc:test-vro',
+      'content_model' => 'usc:vroCModel',
       'form_name' => 'PBCore Updated Preservation Master Location',
       'dsid' => 'PBCORE',
       'title_field' => array('main_title'),
@@ -220,7 +314,7 @@ function usc_mirc_islandora_xml_form_builder_form_associations() {
       'template' => FALSE,
     ),
     'usc_pbcore_preservation_description' => array(
-      'content_model' => 'usc:test-vro',
+      'content_model' => 'usc:vroCModel',
       'form_name' => 'PBCore Description Document',
       'dsid' => 'PBCORE',
       'title_field' => array('titles', 'main_title'),
@@ -269,7 +363,7 @@ function usc_mirc_islandora_xml_form_builder_forms() {
 /**
  * Implements hook_CMODEL_islandora_view_object().
  */
-function usc_mirc_usc_test_vro_islandora_view_object($object) {
+function usc_mirc_usc_vrocmodel_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $output = array(
     'metadata' => usc_mirc_metadata_markup($object),
@@ -283,7 +377,7 @@ function usc_mirc_usc_test_vro_islandora_view_object($object) {
 /**
  * Implements hook_CMODEL_islandora_view_object().
  */
-function usc_mirc_usc_collectionCModel_islandora_view_object($object) {
+function usc_mirc_usc_collectioncmodel_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $form = array(
     'collection_metadata' => array(
@@ -321,7 +415,7 @@ function usc_mirc_usc_collectionCModel_islandora_view_object($object) {
 /**
  * Implements hook_CMODEL_islandora_view_object().
  */
-function usc_mirc_usc_test_mezzanine_islandora_view_object($object) {
+function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $output = array();
   $output['mezzanine_display'] = array(
@@ -824,7 +918,7 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
     $object->owner = isset($user->name) ? $user->name : $object->owner;
     $object->label = $title;
     $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $values['parent_pid']);
-    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:test-mezzanine'));
+    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel'));
 
     $dc_ds = $object->constructDatastream('DC', 'X');
     $dc_ds->label = 'DC Record';
@@ -913,7 +1007,7 @@ function usc_mirc_add_access_variant_form_submit($form, &$form_state) {
   $video_ds->url = $values['streaming_url'];
   $object->ingestDatastream($video_ds);
   $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $values['parent_pid']);
-  $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_access', 'usc:test-access'));
+  $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_access', 'usc:accessCModel'));
   islandora_add_object($object);
   $form_state['redirect'] = "islandora/object/$object->id";
 }
@@ -992,7 +1086,7 @@ function usc_mirc_image_default_styles() {
  * Restricts and renders fields to display for Solr results referencing
  * collection objects.
  */
-function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
+function usc_mirc_usc_collectioncmodel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
   $docs = array();
   $fields = array(
     'mods_title_s',
@@ -1018,9 +1112,9 @@ function usc_mirc_usc_collectionCModel_islandora_solr_object_result_alter(&$obje
  * Implements hook_CMODEL_islandora_solr_results_alter().
  *
  * Restricts and renders fields to display for Solr results referencing
- * test-mezzanine objects.
+ * mezzanineCModel objects.
  */
-function usc_mirc_usc_test_mezzanine_islandora_solr_object_result_alter(&$object_index, $query_processor) {
+function usc_mirc_usc_mezzaninecmodel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
   $docs = array();
   $fields = array(
     'pb_parent_title_Main_ms',
