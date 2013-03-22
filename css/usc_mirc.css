@@ -20,7 +20,12 @@ a.usc-flowplayer {
   width: 480px;
 }
 
-fieldset.usc-mirc-fieldset {
+fieldset.usc-mirc-fieldset-vid {
+  float: left;
+  min-height: 385px;
+}
+
+fieldset.usc-mirc-fieldset-metadata {
   float: left;
   height: auto;
   max-width: 400px;
