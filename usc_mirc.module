@@ -307,7 +307,7 @@ function usc_mirc_islandora_xml_form_builder_form_associations() {
     ),
     'usc_pbcore_preservation_location' => array(
       'content_model' => 'usc:vroCModel',
-      'form_name' => 'PBCore Updated Preservation Master Location',
+      'form_name' => 'PBCore Update Preservation Master Location',
       'dsid' => 'PBCORE',
       'title_field' => array('main_title'),
       'transform' => 'pbcore_to_dc.xsl',
@@ -423,7 +423,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
       '#type' => 'fieldset',
       '#title' => t('Player'),
       '#attributes' => array(
-        'class' => array('usc-mirc-fieldset'),
+        'class' => array('usc-mirc-fieldset-vid'),
       ),
       'flowplayer_video' => usc_mirc_flowplayer_markup($object),
     ),
@@ -431,7 +431,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
       '#type' => 'fieldset',
       '#title' => t('Basic Metadata'),
       '#attributes' => array(
-        'class' => array('usc-mirc-fieldset'),
+        'class' => array('usc-mirc-fieldset-metadata'),
       ),
       'short_metadata' => usc_mirc_metadata_markup($object, TRUE),
     ),
