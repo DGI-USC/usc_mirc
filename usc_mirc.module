@@ -1095,7 +1095,8 @@ function usc_mirc_usc_collectioncmodel_islandora_solr_object_result_alter(&$obje
   );
   foreach ($object_index['solr_doc'] as $field => $value) {
     if (in_array($field, $fields)) {
-      $docs[$field] = $value;
+      $values = (array)$value;
+      $docs[$field] = reset($values);
     }
   }
   if (!empty($docs)) {
@@ -1118,7 +1119,8 @@ function usc_mirc_usc_mezzaninecmodel_islandora_solr_object_result_alter(&$objec
   );
   foreach ($object_index['solr_doc'] as $field => $value) {
     if (in_array($field, $fields)) {
-      $docs[$field] = $value;
+      $values = (array)$value;
+      $docs[$field] = reset($values);
     }
   }
   if (!empty($docs)) {
