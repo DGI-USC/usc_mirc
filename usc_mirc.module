@@ -148,29 +148,63 @@ function usc_mirc_ingest_page(FedoraObject $object) {
   if ($object->id === 'usc:mirc') {
     drupal_set_title(t('Add a new subcollection'));
     return drupal_get_form('islandora_ingest_form', array(
-        'namespace' => 'usc-mirc',
-        'collections' => array($object->id),
+        'namespace' => 'usc',
         'models' => array('usc:collectionCModel'),
+        'parent' => $object->id,
       )
     );
   }
   elseif (in_array('usc:mezzanineCModel', $object->models)) {
     drupal_set_title(t('Add a new access variant'));
-    return drupal_get_form('usc_mirc_add_access_variant_form', $object->id);
+    return drupal_get_form('islandora_ingest_form', array(
+      'namespace' => 'usc',
+      'models' => array('usc:accessCModel'),
+      'parent' => $object->id,
+    ));
   }
   elseif (in_array('usc:collectionCModel', $object->models)) {
     drupal_set_title(t('Add a new preservation master'));
     return drupal_get_form('islandora_ingest_form', array(
-        'namespace' => 'usc-mirc',
-        'collections' => array($object->id),
+        'namespace' => 'usc',
         'models' => array('usc:vroCModel'),
+        'parent' => $object->id,
       )
     );
   }
   elseif (in_array('usc:vroCModel', $object->models)) {
     drupal_set_title(t('Add a new mezzanine'));
-    return drupal_get_form('usc_mirc_add_mezzanine_form', $object->id);
+    return drupal_get_form('islandora_ingest_form', array(
+      'namespace' => 'usc',
+      'models' => array('usc:mezzanineCModel'),
+      'parent' => $object->id,
+    ));
   }
+}
+
+/*
+ * Implements hook_CModel_islandora_ingest_steps().
+ */
+function usc_mirc_usc_accessCModel_islandora_ingest_steps() {
+  return array(
+    'usc_access' => array(
+      'weight' => 10,
+      'type' => 'form',
+      'form_id' => 'usc_mirc_add_access_variant_form',
+    ),
+  );
+}
+
+/*
+ * Implements hook_CModel_islandora_ingest_steps().
+ */
+function usc_mirc_usc_mezzanineCModel_islandora_ingest_steps() {
+  return array(
+    'usc_mezzanine' => array(
+      'weight' => 10,
+      'type' => 'form',
+      'form_id' => 'usc_mirc_add_mezzanine_form',
+    ),
+  );
 }
 
 /**
@@ -739,13 +773,9 @@ function usc_mirc_flowplayer_markup(FedoraObject $object) {
  * @return array
  *   The add a mezzanine form definition.
  */
-function usc_mirc_add_mezzanine_form($form, &$form_state, $pid) {
+function usc_mirc_add_mezzanine_form($form, &$form_state) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $form = array(
-    'parent_pid' => array(
-      '#type' => 'hidden',
-      '#value' => $pid,
-    ),
     'file_name' => array(
       '#type' => 'textfield',
       '#title' => t('Mezzanine file path'),
@@ -755,10 +785,6 @@ function usc_mirc_add_mezzanine_form($form, &$form_state, $pid) {
     ),
     'derivative_type' => usc_mirc_get_mezzanine_types($form_state),
     'derivative_format' => usc_mirc_get_mezzanine_formats($form_state),
-    'submit' => array(
-      '#type' => 'submit',
-      '#value' => t('Ingest'),
-    ),
   );
   return $form;
 }
@@ -789,7 +815,7 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
   else {
     $old_level = error_reporting(-1);
     try {
-      $parent_object = islandora_object_load($values['parent_pid']);
+      $parent_object = islandora_object_load($form_state['islandora']['shared_storage']['parent']);
       // Grab media info output for the given file...
       $command = 'mediainfo --Full --Output=XML ' . escapeshellarg($values['file_name']);
       $descriptor = array(
@@ -843,7 +869,7 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
 
       // Add the title, type and format fields.
       $title = $parent_object->label;
-      $form_state['storage']['usc_mirc']['title'] = $title;
+      $form_state['usc_mirc']['title'] = $title;
 
       $title_el = $pbcore_doc->createElement('instantiationAnnotation', $title);
       $title_el->setAttribute('annotationType', 'instantiation_title');
@@ -859,7 +885,7 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
       $doc_el->appendChild($type_el);
 
       $pbcore_doc->normalizeDocument();
-      $form_state['storage']['usc_mirc']['pbcore'] = $pbcore = $pbcore_doc->saveXML();
+      $form_state['usc_mirc']['pbcore'] = $pbcore = $pbcore_doc->saveXML();
 
       // Create DC transformation of PBCore.
       $dc_transform = new DOMDocument();
@@ -876,7 +902,7 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
       // XXX:  This seems to be necessary for some reason...  It seems to fail
       // to get the newly added elements for the transform otherwise.
       // DOMDocument, y u no work!?
-      $form_state['storage']['usc_mirc']['dc'] = $dc = $transformer->transformToXML($pbcore_doc);
+      $form_state['usc_mirc']['dc'] = $dc = $transformer->transformToXML($pbcore_doc);
       if (!$dc) {
         form_set_error('', t('Failed transforming PBCore XML to DC!'));
         throw new Exception('Get outta here!');
@@ -903,21 +929,15 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
  *   The Drupal form state.
  */
 function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
-  global $user;
-
-  $values = $form_state['values'];
-  $pbcore = $form_state['storage']['usc_mirc']['pbcore'];
-  $dc = $form_state['storage']['usc_mirc']['dc'];
-  $title = $form_state['storage']['usc_mirc']['title'];
+  $pbcore = $form_state['usc_mirc']['pbcore'];
+  $dc = $form_state['usc_mirc']['dc'];
+  $title = $form_state['usc_mirc']['title'];
 
   // If we've properly created the metadata, create the Fedora Object.
   if ($pbcore && $dc) {
-    $pid_namespace = variable_get('usc_mirc_namespace', 'usc');
-    $tuque = islandora_get_tuque_connection();
-    $object = $tuque->repository->constructObject($pid_namespace);
-    $object->owner = isset($user->name) ? $user->name : $object->owner;
+    $object = $form_state['islandora']['objects'][0];
     $object->label = $title;
-    $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $values['parent_pid']);
+    $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $form_state['islandora']['shared_storage']['parent']);
     $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel'));
 
     $dc_ds = $object->constructDatastream('DC', 'X');
@@ -932,7 +952,6 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
     $pbcore_ds->setContentFromString($pbcore);
     $object->ingestDatastream($pbcore_ds);
 
-    islandora_add_object($object);
     $form_state['redirect'] = "islandora/object/$object->id";
   }
   else {
@@ -955,12 +974,8 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
  * @return array
  *   The add access variant form.
  */
-function usc_mirc_add_access_variant_form($form, &$form_state, $pid) {
+function usc_mirc_add_access_variant_form($form, &$form_state) {
   $form = array(
-    'parent_pid' => array(
-      '#type' => 'hidden',
-      '#value' => $pid,
-    ),
     'title' => array(
       '#type' => 'textfield',
       '#title' => t('Object label'),
@@ -972,10 +987,6 @@ function usc_mirc_add_access_variant_form($form, &$form_state, $pid) {
       '#id' => 'usc-mirc-streaming-url',
       '#required' => TRUE,
       '#autocomplete_path' => 'usc/streaming-autocomplete',
-    ),
-    'submit' => array(
-      '#type' => 'submit',
-      '#value' => t('Ingest'),
     ),
   );
   return $form;
@@ -993,22 +1004,15 @@ function usc_mirc_add_access_variant_form($form, &$form_state, $pid) {
  *   The Drupal form state.
  */
 function usc_mirc_add_access_variant_form_submit($form, &$form_state) {
-  global $user;
-  $values = $form_state['values'];
-  $pid_namespace = variable_get('usc_mirc_namespace', 'usc');
-
-  $tuque = islandora_get_tuque_connection();
-  $object = $tuque->repository->constructObject($pid_namespace);
-  $object->owner = isset($user->name) ? $user->name : $object->owner;
-  $object->label = $values['title'];
+  $object = $form_state['islandora']['objects'][0];
+  $object->label = $form_state['values']['title'];
   $video_ds = $object->constructDatastream('VIDEO', 'R');
   $video_ds->label = 'VIDEO';
   $video_ds->mimetype = 'video/mp4';
-  $video_ds->url = $values['streaming_url'];
+  $video_ds->url = $form_state['values']['streaming_url'];
   $object->ingestDatastream($video_ds);
-  $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $values['parent_pid']);
+  $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $form_state['islandora']['shared_storage']['parent']);
   $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_access', 'usc:accessCModel'));
-  islandora_add_object($object);
   $form_state['redirect'] = "islandora/object/$object->id";
 }
 
