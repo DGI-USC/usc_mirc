@@ -54,10 +54,13 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
 }
 
 /**
- * Performs a SPARQL query to retrieve a collection set.
+ * Builds and returns a query for VRO objects based upon parameters.
  *
  * @param FedoraObject $object
  *   A FedoraObject.
+ *
+ * @param bool $count
+ *   Whether this is a count query or not.
  *
  * @param int $page
  *   The page number we are to start at.
@@ -65,14 +68,127 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
  * @param int $number
  *   Number of items per page.
  *
- * @param bool $mezzanines
- *   Whether we are searching mezzanines.
+ * @return array
+ *   Results from the collection set query.
+ */
+function usc_mirc_get_vro_query($object, $count = FALSE, $page = NULL, $number = NULL) {
+  global $user;
+  $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
+
+  $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+  PREFIX fm: <info:fedora/fedora-system:def/model#>
+  PREFIX dc: <http://purl.org/dc/elements/1.1/>
+  PREFIX is: <http://islandora.ca/ontology/relsext#>
+  SELECT ?vro ?vro_title
+  WHERE {
+  ?vro fre:$collection_relation <info:fedora/$object->id> ;
+       fm:hasModel <info:fedora/$vro_cmodel> ;
+       fm:state fm:Active ;
+       dc:title ?vro_title .
+   OPTIONAL {
+      ?vro is:isViewableByUser ?usr .
+      ?vro is:isViewableByRole ?role .
+    }";
+  $role_count = 0;
+  foreach ($user->roles as $role) {
+    if ($role_count === 0) {
+      $query .= "
+        FILTER((bound(?role) && (sameTerm(?role, '$role')";
+    }
+    else {
+      $query .= " || sameTerm(?role, '$role')";
+    }
+    $role_count++;
+  }
+  $query .= ")) || (!bound(?role)))";
+  if ($user->uid != 0) {
+    $user_name = $user->name;
+  }
+  else {
+    $user_name = 'anonymous';
+  }
+  $query .= "
+  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
+  }
+  ORDER BY ?vro_title";
+
+  if (!$count) {
+    $offset = $page * $number;
+    $query .= "
+    LIMIT $number
+    OFFSET $offset";
+  }
+  return $query;
+}
+
+/**
+ * Performs a SPARQL query to go out and get the VRO set.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @param int $page
+ *   The page to start on.
+ *
+ * @param int $number
+ *   The number of items per page.
+ *
+ * @return array
+ *   An array containing the results of the VRO query.
+ */
+function usc_mirc_get_vro_set($object, $page = 0, $number = 20) {
+  $query = usc_mirc_get_vro_query($object, FALSE, $page, $number);
+  $query_array = array(
+    'query' => $query,
+    'type' => 'sparql',
+    'page_size' => $page,
+    'page_number' => $number,
+  );
+
+  $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
+  return $results;
+}
+
+/**
+ * Performs a SPARQL query to retrieve the number of children for VROs.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @return int
+ *   The number of VRO children.
+ */
+function usc_mirc_get_vro_children($object) {
+  $query = usc_mirc_get_vro_query($object, TRUE);
+  $query_array = array(
+    'query' => $query,
+    'type' => 'sparql',
+  );
+  $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
+  return count($results);
+}
+
+/**
+ * Builds and returns a query for mezzanine objects based upon parameters.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @param bool $count
+ *   Whether this is a count query or not.
+ *
+ * @param int $page
+ *   The page number we are to start at.
+ *
+ * @param int $number
+ *   Number of items per page.
  *
  * @return array
  *   Results from the collection set query.
  */
-function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanines = TRUE) {
-  $offset = $page * $number;
+function usc_mirc_get_mezzanine_query($object, $count = FALSE, $page = NULL, $number = NULL) {
+  global $user;
   $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
   $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
@@ -81,31 +197,98 @@ function usc_mirc_get_collection_set($object, $page = 0, $number = 20, $mezzanin
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
   PREFIX dc: <http://purl.org/dc/elements/1.1/>
-  SELECT ?vro " . ($mezzanines ? " ?mezzanine ?mezzanine_title" : "?vro_title") . "
+  PREFIX is: <http://islandora.ca/ontology/relsext#>
+  SELECT ?mezzanine ?mezzanine_title
   WHERE {
   ?vro fre:$collection_relation <info:fedora/$object->id> ;
-       fm:hasModel <info:fedora/$vro_cmodel> ; " .
-       ((!$mezzanines) ? " dc:title ?vro_title ; " : '') . "
-       fm:state fm:Active . " . ($mezzanines ? "
-  OPTIONAL{
+       fm:hasModel <info:fedora/$vro_cmodel> ;
+       fm:state fm:Active .
+
   ?mezzanine fre:$derivative_relation ?vro ;
              fm:hasModel <info:fedora/$mezzanine_cmodel> ;
              fm:state fm:Active ;
              dc:title ?mezzanine_title .
-  }" : '') . "
+    OPTIONAL {
+      ?mezzanine is:isViewableByUser ?usr .
+      ?mezzanine is:isViewableByRole ?role .
+    }";
+  $role_count = 0;
+  foreach ($user->roles as $role) {
+    if ($role_count === 0) {
+      $query .= "
+        FILTER((bound(?role) && (sameTerm(?role, '$role')";
+    }
+    else {
+      $query .= " || sameTerm(?role, '$role')";
+    }
+    $role_count++;
   }
-  ORDER BY " . ($mezzanines? "?mezzanine_title" : "?vro_title") . "
-  LIMIT $number
-  OFFSET $offset";
+  $query .= ")) || (!bound(?role)))";
+  if ($user->uid != 0) {
+    $user_name = $user->name;
+  }
+  else {
+    $user_name = 'anonymous';
+  }
+  $query .= "
+  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
+  }
+  ORDER BY ?mezzanine_title";
 
+  if (!$count) {
+    $offset = $page * $number;
+    $query .= "
+    LIMIT $number
+    OFFSET $offset";
+  }
+  return $query;
+}
+
+/**
+ * Performs a SPARQL query to go out and get the mezzanine set.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @param int $page
+ *   The page to start on.
+ *
+ * @param int $number
+ *   The number of items per page.
+ *
+ * @return array
+ *   An array containing the results of the VRO query.
+ */
+function usc_mirc_get_mezzanine_set($object, $page = 0, $number = 20) {
+  $query = usc_mirc_get_mezzanine_query(FALSE, $object, $page, $number);
   $query_array = array(
     'query' => $query,
     'type' => 'sparql',
     'page_size' => $page,
     'page_number' => $number,
   );
+
   $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
   return $results;
+}
+
+/**
+ * Performs a SPARQL query to retrieve the number of children for mezzaniness.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @return int
+ *   The number of VRO children.
+ */
+function usc_mirc_get_mezzanine_children($object) {
+  $query = usc_mirc_get_mezzanine_query(TRUE, $object);
+  $query_array = array(
+    'query' => $query,
+    'type' => 'sparql',
+  );
+  $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
+  return count($results);
 }
 
 /**

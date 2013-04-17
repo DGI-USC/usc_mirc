@@ -78,7 +78,7 @@ function usc_mirc_menu_alter(&$items) {
  */
 function usc_mirc_collection_tab_access($object = NULL) {
   if (!is_object($object) || !in_array('islandora:collectionCModel', $object->models) || !$object['COLLECTION_POLICY']) {
-  return FALSE;
+    return FALSE;
   }
   return islandora_basic_collection_ingest_child_collection_access($object) ||
     user_access(MANAGE_COLLECTION_POLICY) ||
@@ -99,8 +99,6 @@ function usc_mirc_permission() {
     ),
   );
 }
-
-
 
 /**
  * Determines whether the user has access to ingest new objects or not.
@@ -181,7 +179,7 @@ function usc_mirc_ingest_page(FedoraObject $object) {
   }
 }
 
-/*
+/**
  * Implements hook_CModel_islandora_ingest_steps().
  */
 function usc_mirc_usc_accessCModel_islandora_ingest_steps() {
@@ -194,7 +192,7 @@ function usc_mirc_usc_accessCModel_islandora_ingest_steps() {
   );
 }
 
-/*
+/**
  * Implements hook_CModel_islandora_ingest_steps().
  */
 function usc_mirc_usc_mezzanineCModel_islandora_ingest_steps() {
@@ -203,6 +201,45 @@ function usc_mirc_usc_mezzanineCModel_islandora_ingest_steps() {
       'weight' => 10,
       'type' => 'form',
       'form_id' => 'usc_mirc_add_mezzanine_form',
+    ),
+  );
+}
+
+/**
+ * Implements hook_CModel_islandora_xacml_editor_child_query().
+ */
+function usc_mirc_usc_collectionCModel_islandora_xacml_editor_child_query($object) {
+  $collection_cmodel_query = 'PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+    PREFIX fm: <info:fedora/fedora-system:def/model#>
+    SELECT ?obj
+    FROM <#ri>
+    WHERE {
+        {
+          ?sub fm:hasModel <info:fedora/usc:collectionCModel> {
+            ?vro fre:isMemberOfCollection ?sub .
+            ?mezz fre:isDerivativeOf ?vro .
+            ?obj fre:isDerivativeOf ?mezz
+        }
+        UNION {
+            ?vro fre:isMemberOfCollection ?sub .
+            ?obj fre:isDerivativeOf ?vro
+        }
+        UNION {
+            ?obj fre:isMemberOfCollection ?sub
+        }
+      }
+      UNION{
+          ?sub fm:hasModel <info:fedora/usc:vroCModel> .
+          ?obj fre:isDerivativeOf ?sub .
+      }
+      ?obj fm:state fm:Active
+      FILTER(sameTerm(?sub, <info:fedora/usc:movietone>))
+    }';
+  return array(
+    'usc_collectionCModel' => array(
+      'type' => 'sparql',
+      'query' => $collection_cmodel_query,
+      'description' => t('All new and existing subelements of this collection (includes vros, mezzanines and access variants).'),
     ),
   );
 }
@@ -255,8 +292,8 @@ function usc_mirc_preservation_tab_access($object) {
 }
 
 /**
-* Implements hook_islandora_required_objects().
-*/
+ * Implements hook_islandora_required_objects().
+ */
 function usc_mirc_islandora_required_objects(IslandoraTuque $connection) {
   $module_path = drupal_get_path('module', 'usc_mirc');
 
@@ -310,8 +347,6 @@ function usc_mirc_islandora_required_objects(IslandoraTuque $connection) {
   $datastream->mimetype = 'text/xml';
   $datastream->setContentFromFile("$module_path/data/datastreams/usc_mezzanineCModel/DS-COMPOSITE-MODEL.xml", FALSE);
   $usc_mezzanine->ingestDatastream($datastream);
-
-
   return array(
     'MIRC@SC' => array(
       'title' => 'MIRC@SC',
@@ -634,8 +669,14 @@ function usc_mirc_collection_members_markup(FedoraObject $object, $mezzanines = 
   if (!empty($_GET['page'])) {
     $current_page = $_GET['page'];
   }
-  $child_num = usc_mirc_get_number_of_children($object, $mezzanines);
-  $results = usc_mirc_get_collection_set($object, $current_page, $per_page, $mezzanines);
+  if ($mezzanines) {
+    $child_num = usc_mirc_get_mezzanine_children($object);
+    $results = usc_mirc_get_mezzanine_set($object, $current_page, $per_page);
+  }
+  else {
+    $child_num = usc_mirc_get_vro_children($object);
+    $results = usc_mirc_get_vro_set($object, $current_page, $per_page);
+  }
   $table_headers = array(
     t(''),
     t('Thumbnail'),
@@ -766,9 +807,6 @@ function usc_mirc_flowplayer_markup(FedoraObject $object) {
  *
  * @param array $form_state
  *   The Drupal form state.
- *
- * @param string $pid
- *   PID of the parent object we are adding from.
  *
  * @return array
  *   The add a mezzanine form definition.
@@ -968,9 +1006,6 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
  * @param array $form_state
  *   The Drupal form state.
  *
- * @param string $pid
- *   The PID of the parent object we are adding from.
- *
  * @return array
  *   The add access variant form.
  */
@@ -1099,7 +1134,7 @@ function usc_mirc_usc_collectioncmodel_islandora_solr_object_result_alter(&$obje
   );
   foreach ($object_index['solr_doc'] as $field => $value) {
     if (in_array($field, $fields)) {
-      $values = (array)$value;
+      $values = (array) $value;
       $docs[$field] = reset($values);
     }
   }
@@ -1123,7 +1158,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_solr_object_result_alter(&$objec
   );
   foreach ($object_index['solr_doc'] as $field => $value) {
     if (in_array($field, $fields)) {
-      $values = (array)$value;
+      $values = (array) $value;
       $docs[$field] = reset($values);
     }
   }
