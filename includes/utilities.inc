@@ -260,7 +260,7 @@ function usc_mirc_get_mezzanine_query($object, $count = FALSE, $page = NULL, $nu
  *   An array containing the results of the VRO query.
  */
 function usc_mirc_get_mezzanine_set($object, $page = 0, $number = 20) {
-  $query = usc_mirc_get_mezzanine_query(FALSE, $object, $page, $number);
+  $query = usc_mirc_get_mezzanine_query($object, FALSE, $page, $number);
   $query_array = array(
     'query' => $query,
     'type' => 'sparql',
@@ -282,7 +282,7 @@ function usc_mirc_get_mezzanine_set($object, $page = 0, $number = 20) {
  *   The number of VRO children.
  */
 function usc_mirc_get_mezzanine_children($object) {
-  $query = usc_mirc_get_mezzanine_query(TRUE, $object);
+  $query = usc_mirc_get_mezzanine_query($object, TRUE);
   $query_array = array(
     'query' => $query,
     'type' => 'sparql',
