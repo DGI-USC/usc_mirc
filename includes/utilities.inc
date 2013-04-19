@@ -292,45 +292,6 @@ function usc_mirc_get_mezzanine_children($object) {
 }
 
 /**
- * Performs a SPARQL query to get number of children of an object.
- *
- * @param FedoraObject $object
- *   A FedoraObject.
- *
- * @param bool $mezzanines
- *   Whether we are searching mezzanines or not.
- *
- * @return int
- *   The number of children found.
- */
-function usc_mirc_get_number_of_children($object, $mezzanines = TRUE) {
-  $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
-  $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
-  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
-  $mezzanine_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel');
-
-  $query = "
-  PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
-  PREFIX fm: <info:fedora/fedora-system:def/model#>
-  PREFIX dc: <http://purl.org/dc/elements/1.1/>
-  SELECT ?vro
-  WHERE {
-    ?vro fre:$collection_relation <info:fedora/$object->id> ;
-         fm:hasModel <info:fedora/$vro_cmodel> ;
-         fm:state fm:Active . " . ($mezzanines ? "
-    ?mezzanine fre:$derivative_relation ?vro ;
-               fm:hasModel <info:fedora/$mezzanine_cmodel> ;
-               fm:state fm:Active . " : '') . "
-  }";
-  $query_array = array(
-    'query' => $query,
-    'type' => 'sparql',
-  );
-  $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
-  return count($results);
-}
-
-/**
  * Performs a SPARQL query to retrieve the parent of a mezzanine object.
  *
  * @param FedoraObject $object
@@ -385,7 +346,7 @@ function usc_mirc_mezzanine_player_markup($videos) {
   drupal_add_js("$mod_path/lib/flowplayer/flowplayer-3.2.8.min.js", array('group' => JS_LIBRARY));
 
   $player_class = 'usc-flowplayer';
-  drupal_add_js(<<<EOJS
+  $flowplayer_js = <<<EOJS
   jQuery(function() {
     jQuery('.$player_class').flowplayer("$base_url/$mod_path/lib/flowplayer/flowplayer.commercial-3.2.8.swf", {
 
@@ -409,8 +370,8 @@ function usc_mirc_mezzanine_player_markup($videos) {
       }
     })
   });
-EOJS
-  , array('type' => 'inline'));
+EOJS;
+  drupal_add_js($flowplayer_js, array('type' => 'inline'));
 
   if (count($videos) > 0) {
     $output = array(
@@ -448,6 +409,7 @@ EOJS
  *   The result set.
  */
 function usc_mirc_get_derivatives($object, $subject = NULL) {
+  global $user;
   if ($subject === NULL) {
     $def_rel = variable_get('usc_mirc_relationship', 'isDerivativeOf');
     $subject = "?subject fre:$def_rel <info:fedora/$object->id>";
@@ -455,12 +417,38 @@ function usc_mirc_get_derivatives($object, $subject = NULL) {
   // Perform query.
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
+  PREFIX is: <http://islandora.ca/ontology/relsext#>
   SELECT ?subject ?label
   WHERE {
   $subject ;
          fm:label ?label ;
-         fm:state fm:Active .
+         fm:state fm:Active .";
+  $query .= "OPTIONAL {
+      ?subject is:isViewableByUser ?usr .
+      ?subject is:isViewableByRole ?role .
+    }";
+  $role_count = 0;
+  foreach ($user->roles as $role) {
+    if ($role_count === 0) {
+      $query .= "
+        FILTER((bound(?role) && (sameTerm(?role, '$role')";
+    }
+    else {
+      $query .= " || sameTerm(?role, '$role')";
+    }
+    $role_count++;
+  }
+  $query .= ")) || (!bound(?role)))";
+  if ($user->uid != 0) {
+    $user_name = $user->name;
+  }
+  else {
+    $user_name = 'anonymous';
+  }
+  $query .= "
+  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
   }";
+
   $query_array = array(
     'query' => $query,
     'type' => 'sparql',
