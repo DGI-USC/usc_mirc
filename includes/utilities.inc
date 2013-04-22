@@ -49,7 +49,7 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
       'title' => $title,
       'attributes' => array(),
       )
-     );
+    );
   }
 }
 
