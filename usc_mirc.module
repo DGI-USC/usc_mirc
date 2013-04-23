@@ -1178,6 +1178,9 @@ function usc_mirc_islandora_solr_results_alter(&$object_results, $query_processo
   $image_ds = array('TN', 'IMG', 'JPG');
   foreach ($object_results as $key => $object_result) {
     $path = NULL;
+    foreach ($object_results[$key]['solr_doc'] as $solr_key => $solr_data) {
+      $object_results[$key]['solr_doc'][$solr_key] = truncate_utf8($object_results[$key]['solr_doc'][$solr_key], 256, TRUE, TRUE);
+    }
     foreach ($image_ds as $ds) {
       if (in_array($ds, $object_result['datastreams'])) {
         $path = 'islandora/object/' . $object_result['PID'] . '/datastream/' . $ds . '/view';
