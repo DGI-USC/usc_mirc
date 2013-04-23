@@ -301,19 +301,44 @@ function usc_mirc_get_mezzanine_children($object) {
  *   A bool if it has no parent, or the parent pid otherwise.
  */
 function usc_mirc_get_mezzanine_parent($object) {
+  global $user;
   $vro_cmodel = 'usc:vroCModel';
   $def_rel = variable_get('usc_mirc_relationship', 'isDerivativeOf');
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
+  PREFIX is: <http://islandora.ca/ontology/relsext#>
   SELECT ?object
   WHERE {
     ?subject fre:$def_rel ?object ;
              fm:state fm:Active .
     ?object fm:state fm:Active ;
             fm:hasModel <info:fedora/$vro_cmodel> .
-    FILTER(sameTerm(?subject, <info:fedora/$object->id>)) .
+    OPTIONAL {
+      ?object is:isViewableByUser ?usr .
+      ?object is:isViewableByRole ?role .
+    }
+    FILTER(sameTerm(?subject, <info:fedora/$object->id>)) . ";
+  $role_count = 0;
+  foreach ($user->roles as $role) {
+    if ($role_count === 0) {
+      $query .= "
+        FILTER((bound(?role) && (sameTerm(?role, '$role')";
+    }
+    else {
+      $query .= " || sameTerm(?role, '$role')";
+    }
+    $role_count++;
+  }
+  $query .= ")) || (!bound(?role)))";
+  if ($user->uid != 0) {
+    $user_name = $user->name;
+  }
+  else {
+    $user_name = 'anonymous';
+  }
+  $query .= "
+  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
   }";
-
   $query_array = array(
     'query' => $query,
     'type' => 'sparql',
@@ -556,3 +581,6 @@ function usc_mirc_get_mezzanine_types(&$form_state) {
     }
   }
 }
+
+
+

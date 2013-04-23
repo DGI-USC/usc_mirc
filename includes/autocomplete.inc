@@ -31,7 +31,7 @@ function usc_mirc_traverse_directory($url_base, $filesystem_base, $string, $sub_
   }
 
   if (is_dir($dir_name)) {
-    $dir = getdir($dir_name);
+    $dir = dir($dir_name);
     while ($entry = $dir->read()) {
       if (in_array($entry, array('.', '..'))) {
         continue;

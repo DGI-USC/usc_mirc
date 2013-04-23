@@ -18,6 +18,14 @@ function usc_mirc_menu() {
     'access callback' => 'usc_mirc_preservation_tab_access',
     'access arguments' => array(2),
   );
+  $items['islandora/object/%islandora_object/linked-objects'] = array(
+    'title' => 'Linked Objects',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('usc_mirc_linked_tab', 2),
+    'access callback' => 'usc_mirc_linked_tab_access',
+    'access arguments' => array(2),
+  );
   $items['admin/islandora/mirc-usc'] = array(
     'title' => 'MIRC@SC',
     'description' => 'Configure settings for the custom MIRC@SC module.',
@@ -295,6 +303,29 @@ function usc_mirc_preservation_tab_access($object) {
 }
 
 /**
+ * Determines whether the user has access to the linked objects tab.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @return bool
+ *   TRUE or FALSE depending on access conditions.
+ */
+function usc_mirc_linked_tab_access($object) {
+  if (user_access('access MIRC@SC tabs')) {
+    if (in_array('usc:vroCModel', $object->models) || in_array('usc:mezzanineCModel', $object->models)) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
  * Implements hook_islandora_required_objects().
  */
 function usc_mirc_islandora_required_objects(IslandoraTuque $connection) {
@@ -440,9 +471,6 @@ function usc_mirc_usc_vrocmodel_islandora_view_object($object) {
   $output = array(
     'metadata' => usc_mirc_metadata_markup($object),
   );
-  if (user_access('access MIRC@SC tabs')) {
-    $output['mezzanines_list'] = usc_mirc_mezzanines_list($object);
-  }
   return array('' => drupal_render($output));
 }
 
@@ -509,9 +537,6 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
     ),
   );
 
-  if (user_access('access MIRC@SC tabs')) {
-    $output['mezzanine_display']['access_variant_list'] = usc_mirc_access_variants($object);
-  }
   $breadcrumb = array();
   $breadcrumb[] = l(t('Home'), '<front>');
   $breadcrumb[] = l(t('Repository'), 'islandora/object');
@@ -526,98 +551,6 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
   }
   drupal_set_breadcrumb($breadcrumb);
   return array('' => drupal_render($output));
-}
-
-/**
- * Generates the markup for the list of mezzanines.
- *
- * @global type $base_url
- *
- * @param FedoraObject $object
- *   A FedoraObject.
- *
- * @return string
- *   Markup for the mezzanines' list.
- */
-function usc_mirc_mezzanines_list(FedoraObject $object) {
-  global $base_url;
-  $links = array();
-  $mezzanines = usc_mirc_get_derivatives($object);
-  foreach ($mezzanines as $mezzanine) {
-    $links['usc-mezzanines-' . $mezzanine['subject']['value']] = array(
-      'title' => $mezzanine['label']['value'],
-      'href' => $base_url . '/islandora/object/' . $mezzanine['subject']['value'],
-    );
-  }
-  $output = array(
-    'mezzanines' => array(
-      '#type' => 'fieldset',
-      '#title' => t('Mezzanines'),
-    ),
-  );
-  if (count($links) > 0) {
-    $output['mezzanines']['mezzanines'] = array(
-      '#markup' => theme_links(array(
-        'links' => $links,
-        'attributes' => array(),
-        'heading' => array(),
-      )
-      ),
-    );
-  }
-  else {
-    $output['mezzanines']['mezzanines'] = array(
-      '#markup' => t('No mezzanines currently present.'),
-    );
-  }
-  return $output;
-}
-
-/**
- * Generates the markup for the list of access variants.
- *
- * @global type $base_url
- *
- * @param FedoraObject $object
- *   A Fedora Object.
- *
- * @return array
- *   Access variants form.
- */
-function usc_mirc_access_variants(FedoraObject $object) {
-  global $base_url;
-  $links = array();
-  $variants = usc_mirc_get_derivatives($object);
-  foreach ($variants as $variant) {
-    $links['usc-access-variants-' . $variant['subject']['value']] = array(
-      'title' => $variant['label']['value'],
-      'href' => $base_url . '/islandora/object/' . $variant['subject']['value'],
-    );
-  }
-  $output = array(
-    'access_variants' => array(
-      '#type' => 'fieldset',
-      '#title' => t('Access Variants'),
-    ),
-  );
-  if (count($links) > 0) {
-    $output['access_variants']['list_variants'] = array(
-      '#markup' => theme_links(
-          array(
-            'links' => $links,
-            'attributes' => array(),
-            'heading' => array(),
-          )
-      ),
-      '#weight' => 10,
-    );
-  }
-  else {
-    $output['access_variants']['list_variants'] = array(
-      '#markup' => t('No access variants currently present.'),
-    );
-  }
-  return $output;
 }
 
 /**
@@ -644,6 +577,188 @@ function usc_mirc_preservation_masters_form(array $form, array &$form_state, Fed
     '#collapsed' => TRUE,
     'members' => usc_mirc_collection_members_markup($object, FALSE),
   );
+  $breadcrumb = array();
+  $breadcrumb[] = l(t('Home'), '<front>');
+  $breadcrumb[] = l(t('Repository'), 'islandora/object');
+  drupal_set_breadcrumb($breadcrumb);
+  return $form;
+}
+
+/**
+ * Generates the form for the preservation masters.
+ *
+ * @param array $form
+ *   Form array.
+ *
+ * @param array $form_state
+ *   Form state array.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @return array
+ *   The linked objects tab.
+ */
+function usc_mirc_linked_tab(array $form, array &$form_state, FedoraObject $object) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  $form = array();
+
+  // Tab beginning at mezzanine.
+  if (in_array('usc:mezzanineCModel', $object->models)) {
+    $form = usc_mirc_mezzanine_linked_tab($object);
+  }
+  else {
+    $form = usc_mirc_preservation_linked_tab($object);
+  }
+  return $form;
+}
+
+/**
+ * Builds the linked tab beginning at a mezzanine object.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @return array
+ *   The rendered linked tab form for a mezzanine.
+ */
+function usc_mirc_mezzanine_linked_tab($object) {
+  global $user;
+  $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+  PREFIX fm: <info:fedora/fedora-system:def/model#>
+  PREFIX is: <http://islandora.ca/ontology/relsext#>
+  SELECT ?pres ?label
+  WHERE {
+    ?mez fre:isDerivativeOf ?pres .
+    ?pres fm:label ?label
+    OPTIONAL {
+      ?pres is:isViewableByUser ?usr .
+      ?pres is:isViewableByRole ?role .
+    }
+    FILTER(sameTerm(?mez, <info:fedora/$object->id>))";
+  $role_count = 0;
+  foreach ($user->roles as $role) {
+    if ($role_count === 0) {
+      $query .= "
+        FILTER((bound(?role) && (sameTerm(?role, '$role')";
+    }
+    else {
+      $query .= " || sameTerm(?role, '$role')";
+    }
+    $role_count++;
+  }
+  $query .= ")) || (!bound(?role)))";
+  if ($user->uid != 0) {
+    $user_name = $user->name;
+  }
+  else {
+    $user_name = 'anonymous';
+  }
+  $query .= "
+  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
+  }";
+  $pres_result = $object->repository->ri->query($query, 'sparql');
+
+  if (count($pres_result) > 0) {
+    $pres_pid = $pres_result[0]['pres']['value'];
+    $pres_markup = array(
+      '#markup' => theme_links(
+        array(
+          'links' => array(
+            "usc-preservation-master-$pres_pid" => array(
+              'title' => $pres_result['0']['label']['value'],
+              'href' => "islandora/object/$pres_pid",
+            ),
+          ),
+          'attributes' => array(),
+          'heading' => array(),
+        )
+      ),
+    );
+  }
+  else {
+    $pres_markup = array(
+      '#markup' => t('No linked Preservation Master currently present.'),
+    );
+  }
+  $preservation_master = array(
+    'preservation_master' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Preservation Master'),
+      'preservation_link' => $pres_markup,
+    ),
+  );
+  $form = array();
+  $form['preservation_master'] = $preservation_master;
+  $variants = usc_mirc_get_derivatives($object);
+  $form['access_variants'] = usc_mirc_build_child_links($object, 'Access Variants', $variants);
+  return $form;
+}
+
+/**
+ * Generates the markup for the linked objects tab.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ *
+ * @return array
+ *   Preservation masters form.
+ */
+function usc_mirc_preservation_linked_tab(FedoraObject $object) {
+  global $user;
+  $form = array();
+
+  $relationships = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
+  $subcollection = $relationships[0]['object']['value'];
+  $subject = "?subject fre:isMemberOfCollection <info:fedora/$subcollection>";
+  $pres_masters = usc_mirc_get_derivatives($object, $subject);
+  $form['preservation_masters'] = usc_mirc_build_child_links($object, 'Preservation Masters', $pres_masters);
+  $mezzanines = usc_mirc_get_derivatives($object);
+  $form['mezzanines'] = usc_mirc_build_child_links($object, 'Mezzanines', $mezzanines);
+  $access_query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+    PREFIX fm: <info:fedora/fedora-system:def/model#>
+    PREFIX is: <http://islandora.ca/ontology/relsext#>
+    SELECT ?subject ?label
+      FROM <#ri>
+        WHERE {
+    {
+      ?sub fm:hasModel <info:fedora/usc:collectionCModel> {
+      ?pre fre:isMemberOfCollection ?sub .
+            ?mezz fre:isDerivativeOf ?pre .
+            ?subject fre:isDerivativeOf ?mezz ;
+               fm:label ?label ;
+               fm:state fm:Active
+        }
+      }
+    OPTIONAL {
+      ?subject is:isViewableByUser ?usr .
+      ?subject is:isViewableByRole ?role .
+    }
+    FILTER(sameTerm(?sub, <info:fedora/$subcollection>))";
+  $role_count = 0;
+  foreach ($user->roles as $role) {
+    if ($role_count === 0) {
+      $access_query .= "
+        FILTER((bound(?role) && (sameTerm(?role, '$role')";
+    }
+    else {
+      $access_query .= " || sameTerm(?role, '$role')";
+    }
+    $role_count++;
+  }
+  $access_query .= ")) || (!bound(?role)))";
+  if ($user->uid != 0) {
+    $user_name = $user->name;
+  }
+  else {
+    $user_name = 'anonymous';
+  }
+  $access_query .= "
+  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
+  }";
+
+  $access_variants = $object->repository->ri->query($access_query, 'sparql');
+  $form['access_variants'] = usc_mirc_build_child_links($object, 'Access Variants', $access_variants);
   $breadcrumb = array();
   $breadcrumb[] = l(t('Home'), '<front>');
   $breadcrumb[] = l(t('Repository'), 'islandora/object');
@@ -762,18 +877,16 @@ function usc_mirc_metadata_markup($object, $short = FALSE) {
     }
     else {
       $output = array(
-        '#title' => t('Failure!'),
-        '#markup' => t('Failed to load the PBCore; Datastream does not exist.'),
+        '#markup' => t('Failed to load the PBCore; Datastream does not exist or the parent object has XACML.'),
       );
-      return drupal_render($output);
+      return $output;
     }
   }
   else {
     $output = array(
-      '#title' => t('Failure!'),
       '#markup' => t('Failed to load the PBCore; Unable to retrieve pid of object that contains PBCORE.'),
     );
-    return drupal_render($output);
+    return $output;
   }
 }
 
@@ -1178,6 +1291,9 @@ function usc_mirc_islandora_solr_results_alter(&$object_results, $query_processo
   $image_ds = array('TN', 'IMG', 'JPG');
   foreach ($object_results as $key => $object_result) {
     $path = NULL;
+    foreach ($object_results[$key]['solr_doc'] as $solr_key => $solr_data) {
+      $object_results[$key]['solr_doc'][$solr_key] = truncate_utf8($object_results[$key]['solr_doc'][$solr_key], 256, TRUE, TRUE);
+    }
     foreach ($image_ds as $ds) {
       if (in_array($ds, $object_result['datastreams'])) {
         $path = 'islandora/object/' . $object_result['PID'] . '/datastream/' . $ds . '/view';
@@ -1199,3 +1315,53 @@ function usc_mirc_islandora_solr_results_alter(&$object_results, $query_processo
     }
   }
 }
+
+/**
+ * Builds a fieldset containing children of the passed in object.
+ *
+ * @param FedoraObject $object
+ *   A FedoraObject.
+ * @param string $type
+ *   The name of the resultant fieldset.
+ * @param array $children
+ *   The results of a SPARQL query containing the children to build.
+ *
+ * @return array
+ *   The rendered fieldset.
+ */
+function usc_mirc_build_child_links($object, $type, $children) {
+  $links = array();
+  foreach ($children as $child) {
+    if ($child['subject']['value'] !== $object->id) {
+      $links['usc-' . $child['subject']['value']] = array(
+        'title' => $child['label']['value'],
+        'href' => 'islandora/object/' . $child['subject']['value'],
+      );
+    }
+  }
+  $fieldset = array(
+    "$type" => array(
+      '#type' => 'fieldset',
+      '#title' => t($type),
+    ),
+  );
+  if (count($links) > 0) {
+    $fieldset["$type"]['theme_links'] = array(
+      '#markup' => theme_links(
+        array(
+          'links' => $links,
+          'attributes' => array(),
+          'heading' => array(),
+        )
+      ),
+      '#weight' => 10,
+    );
+  }
+  else {
+    $fieldset["$type"]['theme_links'] = array(
+      '#markup' => t('No linked @type currently present.', array('@type' => $type)),
+    );
+  }
+  return $fieldset;
+}
+
