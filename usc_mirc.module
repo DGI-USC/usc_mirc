@@ -1292,7 +1292,13 @@ function usc_mirc_islandora_solr_results_alter(&$object_results, $query_processo
   foreach ($object_results as $key => $object_result) {
     $path = NULL;
     foreach ($object_results[$key]['solr_doc'] as $solr_key => $solr_data) {
-      $object_results[$key]['solr_doc'][$solr_key] = truncate_utf8($object_results[$key]['solr_doc'][$solr_key], 256, TRUE, TRUE);
+      if (is_array($solr_data)) {
+        $trunc_solr_data = truncate_utf8($solr_data[0], 256, TRUE, TRUE);
+      }
+      else {
+        $trunc_solr_data = truncate_utf8($solr_data, 256, TRUE, TRUE);
+      }
+      $object_results[$key]['solr_doc'][$solr_key] = $trunc_solr_data;
     }
     foreach ($image_ds as $ds) {
       if (in_array($ds, $object_result['datastreams'])) {
@@ -1363,5 +1369,29 @@ function usc_mirc_build_child_links($object, $type, $children) {
     );
   }
   return $fieldset;
+}
+
+/**
+ * Implements hook_islandora_solr_query().
+ */
+function usc_mirc_islandora_solr_query($islandora_solr_query) {
+  global $user;
+
+  $pres_search = array('administrator', 'Creator', 'Editor', 'Manager');
+  $accepted_role = FALSE;
+  foreach ($user->roles as $role) {
+    if (in_array($role, $pres_search)) {
+      $accepted_role = TRUE;
+      break;
+    }
+  }
+
+  if (!$accepted_role) {
+    $fq = "+rels_hasModel_uri_ms:(usc\:mezzanineCModel usc\:collectionCModel) +(pb_parent_title_Main_ms:[* TO *] mods_title_s:[* TO *])";
+  }
+  else {
+    $fq = "+rels_hasModel_uri_ms:(usc\:mezzanineCModel usc\:collectionCModel usc\:vroCModel) +(pb_title_Main_ms:[* TO *] pb_parent_title_Main_ms:[* TO *] mods_title_s:[* TO *])";
+  }
+  $islandora_solr_query->solrParams['fq'][] = $fq;
 }
 
