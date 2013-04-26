@@ -551,7 +551,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
   $breadcrumb[] = l(t('Home'), '<front>');
   $breadcrumb[] = l(t('Repository'), 'islandora/object');
   $usc_breadcrumb = usc_mirc_build_breadcrumb($object);
-  if (!$usc_breadcrumb) {
+  if ($usc_breadcrumb) {
     $breadcrumb[] = $usc_breadcrumb;
   }
   // Add the preservation master breadcrumb if the user has permission.
