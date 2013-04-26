@@ -312,8 +312,18 @@ function usc_mirc_preservation_tab_access($object) {
  *   TRUE or FALSE depending on access conditions.
  */
 function usc_mirc_linked_tab_access($object) {
+  if (!is_object($object)) {
+    return FALSE;
+  }
+
   if (user_access('access MIRC@SC tabs')) {
-    if (in_array('usc:vroCModel', $object->models) || in_array('usc:mezzanineCModel', $object->models)) {
+    $linked_cmodels = array(
+      variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel'),
+      variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel'),
+    );
+
+    $models_intersect = array_intersect($linked_cmodels, $object->models);
+    if (!empty($models_intersect)) {
       return TRUE;
     }
     else {
@@ -540,7 +550,10 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
   $breadcrumb = array();
   $breadcrumb[] = l(t('Home'), '<front>');
   $breadcrumb[] = l(t('Repository'), 'islandora/object');
-  $breadcrumb[] = usc_mirc_build_breadcrumb($object);
+  $usc_breadcrumb = usc_mirc_build_breadcrumb($object);
+  if (!$usc_breadcrumb) {
+    $breadcrumb[] = $usc_breadcrumb;
+  }
   // Add the preservation master breadcrumb if the user has permission.
   if (user_access('access MIRC@SC tabs')) {
     $parent_pid = usc_mirc_get_mezzanine_parent($object);
@@ -623,7 +636,7 @@ function usc_mirc_linked_tab(array $form, array &$form_state, FedoraObject $obje
  *   The rendered linked tab form for a mezzanine.
  */
 function usc_mirc_mezzanine_linked_tab($object) {
-  global $user;
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
   PREFIX is: <http://islandora.ca/ontology/relsext#>
@@ -636,27 +649,7 @@ function usc_mirc_mezzanine_linked_tab($object) {
       ?pres is:isViewableByRole ?role .
     }
     FILTER(sameTerm(?mez, <info:fedora/$object->id>))";
-  $role_count = 0;
-  foreach ($user->roles as $role) {
-    if ($role_count === 0) {
-      $query .= "
-        FILTER((bound(?role) && (sameTerm(?role, '$role')";
-    }
-    else {
-      $query .= " || sameTerm(?role, '$role')";
-    }
-    $role_count++;
-  }
-  $query .= ")) || (!bound(?role)))";
-  if ($user->uid != 0) {
-    $user_name = $user->name;
-  }
-  else {
-    $user_name = 'anonymous';
-  }
-  $query .= "
-  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
-  }";
+  $query .= usc_mirc_append_xacml_filter();
   $pres_result = $object->repository->ri->query($query, 'sparql');
 
   if (count($pres_result) > 0) {
@@ -735,27 +728,7 @@ function usc_mirc_preservation_linked_tab(FedoraObject $object) {
       ?subject is:isViewableByRole ?role .
     }
     FILTER(sameTerm(?sub, <info:fedora/$subcollection>))";
-  $role_count = 0;
-  foreach ($user->roles as $role) {
-    if ($role_count === 0) {
-      $access_query .= "
-        FILTER((bound(?role) && (sameTerm(?role, '$role')";
-    }
-    else {
-      $access_query .= " || sameTerm(?role, '$role')";
-    }
-    $role_count++;
-  }
-  $access_query .= ")) || (!bound(?role)))";
-  if ($user->uid != 0) {
-    $user_name = $user->name;
-  }
-  else {
-    $user_name = 'anonymous';
-  }
-  $access_query .= "
-  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
-  }";
+  $access_query .= usc_mirc_append_xacml_filter();
 
   $access_variants = $object->repository->ri->query($access_query, 'sparql');
   $form['access_variants'] = usc_mirc_build_child_links($object, 'Access Variants', $access_variants);
@@ -1378,15 +1351,9 @@ function usc_mirc_islandora_solr_query($islandora_solr_query) {
   global $user;
 
   $pres_search = array('administrator', 'Creator', 'Editor', 'Manager');
-  $accepted_role = FALSE;
-  foreach ($user->roles as $role) {
-    if (in_array($role, $pres_search)) {
-      $accepted_role = TRUE;
-      break;
-    }
-  }
+  $accepted_role = array_intersect($pres_search, $user->roles);
 
-  if (!$accepted_role) {
+  if (empty($accepted_role)) {
     $fq = "+rels_hasModel_uri_ms:(usc\:mezzanineCModel usc\:collectionCModel) +(pb_parent_title_Main_ms:[* TO *] mods_title_s:[* TO *])";
   }
   else {

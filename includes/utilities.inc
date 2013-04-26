@@ -72,7 +72,6 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
  *   Results from the collection set query.
  */
 function usc_mirc_get_vro_query($object, $count = FALSE, $page = NULL, $number = NULL) {
-  global $user;
   $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
 
@@ -90,28 +89,8 @@ function usc_mirc_get_vro_query($object, $count = FALSE, $page = NULL, $number =
       ?vro is:isViewableByUser ?usr .
       ?vro is:isViewableByRole ?role .
     }";
-  $role_count = 0;
-  foreach ($user->roles as $role) {
-    if ($role_count === 0) {
-      $query .= "
-        FILTER((bound(?role) && (sameTerm(?role, '$role')";
-    }
-    else {
-      $query .= " || sameTerm(?role, '$role')";
-    }
-    $role_count++;
-  }
-  $query .= ")) || (!bound(?role)))";
-  if ($user->uid != 0) {
-    $user_name = $user->name;
-  }
-  else {
-    $user_name = 'anonymous';
-  }
-  $query .= "
-  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
-  }
-  ORDER BY ?vro_title";
+  $query .= usc_mirc_append_xacml_filter();
+  $query .= "ORDER BY ?vro_title";
 
   if (!$count) {
     $offset = $page * $number;
@@ -188,7 +167,6 @@ function usc_mirc_get_vro_children($object) {
  *   Results from the collection set query.
  */
 function usc_mirc_get_mezzanine_query($object, $count = FALSE, $page = NULL, $number = NULL) {
-  global $user;
   $collection_relation = variable_get('usc_mirc_collection_relationship', 'isMemberOfCollection');
   $derivative_relation = variable_get('usc_mirc_relationship', 'isDerivativeOf');
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
@@ -212,28 +190,8 @@ function usc_mirc_get_mezzanine_query($object, $count = FALSE, $page = NULL, $nu
       ?mezzanine is:isViewableByUser ?usr .
       ?mezzanine is:isViewableByRole ?role .
     }";
-  $role_count = 0;
-  foreach ($user->roles as $role) {
-    if ($role_count === 0) {
-      $query .= "
-        FILTER((bound(?role) && (sameTerm(?role, '$role')";
-    }
-    else {
-      $query .= " || sameTerm(?role, '$role')";
-    }
-    $role_count++;
-  }
-  $query .= ")) || (!bound(?role)))";
-  if ($user->uid != 0) {
-    $user_name = $user->name;
-  }
-  else {
-    $user_name = 'anonymous';
-  }
-  $query .= "
-  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
-  }
-  ORDER BY ?mezzanine_title";
+  $query .= usc_mirc_append_xacml_filter();
+  $query .= "ORDER BY ?mezzanine_title";
 
   if (!$count) {
     $offset = $page * $number;
@@ -318,27 +276,7 @@ function usc_mirc_get_mezzanine_parent($object) {
       ?object is:isViewableByRole ?role .
     }
     FILTER(sameTerm(?subject, <info:fedora/$object->id>)) . ";
-  $role_count = 0;
-  foreach ($user->roles as $role) {
-    if ($role_count === 0) {
-      $query .= "
-        FILTER((bound(?role) && (sameTerm(?role, '$role')";
-    }
-    else {
-      $query .= " || sameTerm(?role, '$role')";
-    }
-    $role_count++;
-  }
-  $query .= ")) || (!bound(?role)))";
-  if ($user->uid != 0) {
-    $user_name = $user->name;
-  }
-  else {
-    $user_name = 'anonymous';
-  }
-  $query .= "
-  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
-  }";
+  $query .= usc_mirc_append_xacml_filter();
   $query_array = array(
     'query' => $query,
     'type' => 'sparql',
@@ -452,28 +390,7 @@ function usc_mirc_get_derivatives($object, $subject = NULL) {
       ?subject is:isViewableByUser ?usr .
       ?subject is:isViewableByRole ?role .
     }";
-  $role_count = 0;
-  foreach ($user->roles as $role) {
-    if ($role_count === 0) {
-      $query .= "
-        FILTER((bound(?role) && (sameTerm(?role, '$role')";
-    }
-    else {
-      $query .= " || sameTerm(?role, '$role')";
-    }
-    $role_count++;
-  }
-  $query .= ")) || (!bound(?role)))";
-  if ($user->uid != 0) {
-    $user_name = $user->name;
-  }
-  else {
-    $user_name = 'anonymous';
-  }
-  $query .= "
-  FILTER((bound(?usr) && (sameTerm(?usr, '$user_name'))) || (!bound(?usr)))
-  }";
-
+  $query .= usc_mirc_append_xacml_filter();
   $query_array = array(
     'query' => $query,
     'type' => 'sparql',
@@ -488,8 +405,8 @@ function usc_mirc_get_derivatives($object, $subject = NULL) {
  * @param FedoraObject $object
  *   A FedoraObject.
  *
- * @return string
- *   Markup containing the link to the object.
+ * @return mixed
+ *   Markup to the of the object or FALSE if no parents are visible to the user.
  */
 function usc_mirc_build_breadcrumb($object) {
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
@@ -497,6 +414,7 @@ function usc_mirc_build_breadcrumb($object) {
   $pid = $object->id;
   $query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
   PREFIX fm: <info:fedora/fedora-system:def/model#>
+  PREFIX is: <http://islandora.ca/ontology/relsext#>
   SELECT ?parent
   WHERE {
     {
@@ -506,6 +424,10 @@ function usc_mirc_build_breadcrumb($object) {
       ?vro fre:isMemberOfCollection ?parent ;
            fm:hasModel <info:fedora/$vro_cmodel> ;
            fm:state fm:Active .
+      OPTIONAL {
+        ?parent is:isViewableByUser ?usr .
+        ?parent is:isViewableByRole ?role .
+      }
     }
     UNION
     {
@@ -513,17 +435,25 @@ function usc_mirc_build_breadcrumb($object) {
             fm:hasModel ?model ;
             fm:state fm:Active .
       FILTER(!sameterm(?model, <info:fedora/$vro_cmodel>)) .
+      OPTIONAL {
+        ?parent is:isViewableByUser ?usr .
+        ?parent is:isViewableByRole ?role .
+      }
     }
-    FILTER(sameterm(?this, <info:fedora/$pid>))
-  }";
+    FILTER(sameterm(?this, <info:fedora/$pid>))";
+  $query .= usc_mirc_append_xacml_filter();
+
   $query_array = array(
     'query' => $query,
     'type' => 'sparql',
   );
   $results = $object->repository->ri->query($query_array['query'], $query_array['type']);
-  $parent_object = islandora_object_load($results[0]['parent']['value']);
-  $title = $parent_object->label;
-  return l($title, "islandora/object/$parent_object->id");
+  if ($results) {
+    $parent_object = islandora_object_load($results[0]['parent']['value']);
+    $title = $parent_object->label;
+    return l($title, "islandora/object/$parent_object->id");
+  }
+  return FALSE;
 }
 
 /**
@@ -582,5 +512,35 @@ function usc_mirc_get_mezzanine_types(&$form_state) {
   }
 }
 
+/**
+ * Constructs and returns the XACML filter for the current user.
+ *
+ * @return string
+ *   The XACML filter.
+ */
+function usc_mirc_append_xacml_filter() {
+  global $user;
+  $filter_string = '';
+  $role_count = 0;
+  foreach ($user->roles as $role) {
+    if ($role_count === 0) {
+      $filter_string .= "FILTER(!bound(?role) || (bound(?role) && (sameTerm(?role, '$role')";
+    }
+    else {
+      $filter_string .= " || sameTerm(?role, '$role')";
+    }
+    $role_count++;
+  }
+  $filter_string .= "))";
+  if ($user->uid != 0) {
+    $user_name = $user->name;
+  }
+  else {
+    $user_name = 'anonymous';
+  }
+  $filter_string .= " || (!bound(?usr) || (bound(?usr) && sameTerm(?usr, '$user_name'))))
+  }";
+  return $filter_string;
+}
 
 
