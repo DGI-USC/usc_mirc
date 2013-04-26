@@ -538,9 +538,7 @@ function usc_mirc_append_xacml_filter() {
   else {
     $user_name = 'anonymous';
   }
-  $filter_string .= " || (!bound(?usr) || (bound(?usr) && sameTerm(?usr, '$user_name'))))
-  }";
+  $filter_string .= " || (!bound(?usr) || (bound(?usr) && sameTerm(?usr, '$user_name'))))\n}";
   return $filter_string;
 }
-
 

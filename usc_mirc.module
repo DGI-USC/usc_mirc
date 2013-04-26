@@ -1362,3 +1362,4 @@ function usc_mirc_islandora_solr_query($islandora_solr_query) {
   $islandora_solr_query->solrParams['fq'][] = $fq;
 }
 
+
