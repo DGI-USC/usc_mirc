@@ -545,8 +545,16 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
       ),
       'short_metadata' => usc_mirc_metadata_markup($object, TRUE),
     ),
+    'full_metadata' => array(
+      '#title' => t('Full Metadata'),
+      '#type' => 'fieldset',
+      '#weight' => 15,
+      '#access' => user_access('access MIRC@SC tabs'),
+      '#collapsed' => TRUE,
+      '#collapsible' => TRUE,
+      'full_metadata' => usc_mirc_metadata_markup($object),
+    ),
   );
-
   $breadcrumb = array();
   $breadcrumb[] = l(t('Home'), '<front>');
   $breadcrumb[] = l(t('Repository'), 'islandora/object');
@@ -826,7 +834,7 @@ function usc_mirc_collection_members_markup(FedoraObject $object, $mezzanines = 
 function usc_mirc_metadata_markup($object, $short = FALSE) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
 
-  if ($short) {
+  if ($short || in_array('usc:mezzanineCModel', $object->models)) {
     $pbcore_pid = usc_mirc_get_mezzanine_parent($object);
   }
   else {
@@ -834,7 +842,7 @@ function usc_mirc_metadata_markup($object, $short = FALSE) {
   }
 
   if ($pbcore_pid) {
-    if ($short) {
+    if ($short || in_array('usc:mezzanineCModel', $object->models)) {
       $pbcore_object = islandora_object_load($pbcore_pid);
     }
     else {
