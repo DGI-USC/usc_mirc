@@ -222,28 +222,28 @@ function usc_mirc_usc_collectionCModel_islandora_xacml_editor_child_query($objec
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
   $collection_cmodel_query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
     PREFIX fm: <info:fedora/fedora-system:def/model#>
-    SELECT ?obj
+    SELECT ?object
     FROM <#ri>
     WHERE {
         {
           ?sub fm:hasModel <info:fedora/usc:collectionCModel> {
             ?vro fre:$collection_relation ?sub .
             ?mezz fre:$derivative_relation ?vro .
-            ?obj fre:$derivative_relation ?mezz
+            ?object fre:$derivative_relation ?mezz
         }
         UNION {
             ?vro fre:$collection_relation ?sub .
-            ?obj fre:$derivative_relation ?vro
+            ?object fre:$derivative_relation ?vro
         }
         UNION {
-            ?obj fre:$collection_relation ?sub
+            ?object fre:$collection_relation ?sub
         }
       }
       UNION{
           ?sub fm:hasModel <info:fedora/$vro_cmodel> .
-          ?obj fre:$derivative_relation ?sub .
+          ?object fre:$derivative_relation ?sub .
       }
-      ?obj fm:state fm:Active
+      ?object fm:state fm:Active
       FILTER(sameTerm(?sub, <info:fedora/$object->id>))
     }";
   return array(
