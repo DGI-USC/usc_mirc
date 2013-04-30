@@ -549,6 +549,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
       '#title' => t('Full Metadata'),
       '#type' => 'fieldset',
       '#weight' => 15,
+      '#access' => user_access('access MIRC@SC tabs'),
       '#attributes' => array(
         'class' => array(
           'collapsible',
