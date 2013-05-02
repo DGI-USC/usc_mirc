@@ -157,6 +157,7 @@ function usc_mirc_ingest_page(FedoraObject $object) {
         'namespace' => 'usc',
         'models' => array('usc:collectionCModel'),
         'parent' => $object->id,
+        'collections' => array('usc:mirc'),
       )
     );
   }
