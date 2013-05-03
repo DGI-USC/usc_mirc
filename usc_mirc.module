@@ -191,6 +191,28 @@ function usc_mirc_ingest_page(FedoraObject $object) {
 /**
  * Implements hook_CModel_islandora_ingest_steps().
  */
+function usc_mirc_usc_collectionCModel_islandora_ingest_steps($form_state) {
+  $objects = isset($form_state['islandora']['objects']) ? $form_state['islandora']['objects'] : array();
+  return array(
+    'usc_policy' => array(
+      'weight' => 0,
+      'type' => 'callback',
+      'module' => 'usc_mirc',
+      'do_function' => array(
+        'function' => 'usc_mirc_apply_root_policy',
+        'args' => array($objects),
+      ),
+      'undo_function' => array(
+        'function' => 'usc_mirc_undo_root_policy',
+        'args' => array($objects),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_CModel_islandora_ingest_steps().
+ */
 function usc_mirc_usc_accessCModel_islandora_ingest_steps() {
   return array(
     'usc_access' => array(
@@ -214,6 +236,46 @@ function usc_mirc_usc_mezzanineCModel_islandora_ingest_steps() {
   );
 }
 
+/**
+ * Applies the XACML POLICY USC uses for workflow on the subcollection object.
+ *
+ * @param array $form_state
+ *   The Drupal form state.
+ * @param array $objects
+ *   An array of objects to apply the POLICY to.
+ */
+function usc_mirc_apply_root_policy(&$form_state, $objects) {
+  $module_path = drupal_get_path('module', 'usc_mirc');
+  $xacml_xml = file_get_contents("$module_path/data/xacml/usc_root_policy.xml");
+
+  foreach ($objects as $object) {
+    $xacml = new IslandoraXacml($object, $xacml_xml);
+    $xacml->writeBackToFedora();
+  }
+}
+
+/**
+ * Removes the XACML POLICY uses for workflow on the subcollection object.
+ *
+ * @param array $form_state
+ *   The Drupal form state.
+ * @param array $objects
+ *   An array of objects to remove the POLICY fro.
+ */
+function usc_mirc_undo_root_policy(&$form_state, $objects) {
+  foreach ($objects as $object) {
+    $viewable_by_user = 'isViewableByUser';
+    $viewable_by_role = 'isViewableByRole';
+    $object->purgeDatastream('POLICY');
+    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, $viewable_by_user);
+    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, $viewable_by_role);
+
+    foreach ($object as $dsid => $value) {
+      $object[$dsid]->relationships->remove(ISLANDORA_RELS_INT_URI, $viewable_by_user);
+      $object[$dsid]->relationships->remove(ISLANDORA_RELS_INT_URI, $viewable_by_role);
+    }
+  }
+}
 /**
  * Implements hook_CModel_islandora_xacml_editor_child_query().
  */
@@ -1373,5 +1435,3 @@ function usc_mirc_islandora_solr_query($islandora_solr_query) {
   }
   $islandora_solr_query->solrParams['fq'][] = $fq;
 }
-
-
