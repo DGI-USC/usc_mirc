@@ -192,7 +192,6 @@ function usc_mirc_ingest_page(FedoraObject $object) {
  * Implements hook_CModel_islandora_ingest_steps().
  */
 function usc_mirc_usc_collectionCModel_islandora_ingest_steps($form_state) {
-  $objects = isset($form_state['islandora']['objects']) ? $form_state['islandora']['objects'] : array();
   return array(
     'usc_policy' => array(
       'weight' => 0,
@@ -200,11 +199,11 @@ function usc_mirc_usc_collectionCModel_islandora_ingest_steps($form_state) {
       'module' => 'usc_mirc',
       'do_function' => array(
         'function' => 'usc_mirc_apply_root_policy',
-        'args' => array($objects),
+        'args' => array(),
       ),
       'undo_function' => array(
         'function' => 'usc_mirc_undo_root_policy',
-        'args' => array($objects),
+        'args' => array(),
       ),
     ),
   );
@@ -241,14 +240,12 @@ function usc_mirc_usc_mezzanineCModel_islandora_ingest_steps() {
  *
  * @param array $form_state
  *   The Drupal form state.
- * @param array $objects
- *   An array of objects to apply the POLICY to.
  */
-function usc_mirc_apply_root_policy(&$form_state, $objects) {
+function usc_mirc_apply_root_policy(&$form_state) {
   $module_path = drupal_get_path('module', 'usc_mirc');
   $xacml_xml = file_get_contents("$module_path/data/xacml/usc_root_policy.xml");
 
-  foreach ($objects as $object) {
+  foreach ($form_state['islandora']['objects'] as $object) {
     $xacml = new IslandoraXacml($object, $xacml_xml);
     $xacml->writeBackToFedora();
   }
@@ -259,11 +256,9 @@ function usc_mirc_apply_root_policy(&$form_state, $objects) {
  *
  * @param array $form_state
  *   The Drupal form state.
- * @param array $objects
- *   An array of objects to remove the POLICY from.
  */
-function usc_mirc_undo_root_policy(&$form_state, $objects) {
-  foreach ($objects as $object) {
+function usc_mirc_undo_root_policy(&$form_state) {
+  foreach ($form_state['islandora']['objects'] as $object) {
     $viewable_by_user = 'isViewableByUser';
     $viewable_by_role = 'isViewableByRole';
     $object->purgeDatastream('POLICY');
