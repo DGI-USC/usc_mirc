@@ -1325,6 +1325,30 @@ function usc_mirc_usc_mezzaninecmodel_islandora_solr_object_result_alter(&$objec
 }
 
 /**
+ * Implements hook_CMODEL_islandora_solr_results_alter().
+ *
+ * Restricts and renders fields to display for Solr results referencing
+ * mezzanineCModel objects.
+ */
+function usc_mirc_usc_vrocmodel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
+  $docs = array();
+  $fields = array(
+    'pb_title_Item_ms',
+    'pb_description_summary_ms',
+    'pb_coverage_Temporal_ms',
+  );
+  foreach ($object_index['solr_doc'] as $field => $value) {
+    if (in_array($field, $fields)) {
+      $values = (array) $value;
+      $docs[$field] = reset($values);
+    }
+  }
+  if (!empty($docs)) {
+    $object_index['solr_doc'] = $docs;
+  }
+}
+
+/**
  * Implements hook_islandora_solr_results_alter().
  *
  * Sets a thumbnail URL. USC objects don't all have TN datastreams by default,
