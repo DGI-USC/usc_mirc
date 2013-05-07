@@ -1456,3 +1456,73 @@ function usc_mirc_islandora_solr_query($islandora_solr_query) {
   }
   $islandora_solr_query->solrParams['fq'][] = $fq;
 }
+
+/**
+ * Implements islandora_bookmark_export_handler().
+ */
+function usc_mirc_islandora_bookmark_export_handler() {
+  $usc_mirc = array();
+  $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
+  return $usc_mirc;
+}
+
+/**
+ * Performs USC's custom export functionality.
+ *
+ * @param array $pids
+ *   An array of pids ready for export.
+ */
+function usc_mirc_export_objects_as_text($pids) {
+  $path_export = array();
+  foreach ($pids as $pid) {
+    $object = islandora_object_load($pid);
+    if ($object) {
+      $path = FALSE;
+      if ($object['PBCORE']) {
+        $pb_xml = simplexml_load_string($object['PBCORE']->content);
+        $pb_xml->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+        if (in_array('usc:vroCModel', $object->models)) {
+          $pb_results = $pb_xml->xpath('pb:pbcoreInstantiation/pb:instantiationLocation/text()');
+          dsm($pb_results);
+          if (!empty($pb_results)) {
+            foreach ($pb_results as $result) {
+              $potential_path = (string) reset($result);
+              preg_match('/\/(.*)/', $potential_path, $path_match);
+              if (!empty($path_match)) {
+                $path = $path_match[0];
+                break;
+              }
+            }
+          }
+        }
+        elseif (in_array('usc:mezzanineCModel', $object->models)) {
+          $pb_results = $pb_xml->xpath('pb:instantiationIdentifier/text()');
+          if (!empty($pb_results)) {
+            $path = (string) $pb_results[0];
+          }
+        }
+        if ($path) {
+          $path_export[] = $path;
+        }
+      }
+    }
+  }
+  if (!empty($path_export)) {
+    $export_text = fopen('php://output', 'w');
+    $count = 0;
+    foreach ($path_export as $path) {
+      if ($count == 0) {
+        fwrite($export_text, $path);
+      }
+      else {
+        fwrite($export_text, PHP_EOL . $path);
+      }
+      $count++;
+    }
+    fclose($export_text);
+    drupal_add_http_header('Content-Type', 'text/plain');
+    drupal_add_http_header('Content-Disposition', 'attachment;filename=my_video_export.txt');
+    drupal_exit();
+  }
+}
+
