@@ -1409,7 +1409,7 @@ function usc_mirc_build_child_links($object, $type, $children) {
   $fieldset = array(
     "$type" => array(
       '#type' => 'fieldset',
-      '#title' => t($type),
+      '#title' => $type,
     ),
   );
   if (count($links) > 0) {
@@ -1467,6 +1467,8 @@ function usc_mirc_islandora_bookmark_export_handler() {
  */
 function usc_mirc_export_objects_as_text($pids) {
   $path_export = array();
+  $mezz_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel');
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
   foreach ($pids as $pid) {
     $object = islandora_object_load($pid);
     if ($object) {
@@ -1474,9 +1476,8 @@ function usc_mirc_export_objects_as_text($pids) {
       if ($object['PBCORE']) {
         $pb_xml = simplexml_load_string($object['PBCORE']->content);
         $pb_xml->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
-        if (in_array('usc:vroCModel', $object->models)) {
+        if (in_array($vro_cmodel, $object->models)) {
           $pb_results = $pb_xml->xpath('pb:pbcoreInstantiation/pb:instantiationLocation/text()');
-          dsm($pb_results);
           if (!empty($pb_results)) {
             foreach ($pb_results as $result) {
               $potential_path = (string) reset($result);
@@ -1488,7 +1489,7 @@ function usc_mirc_export_objects_as_text($pids) {
             }
           }
         }
-        elseif (in_array('usc:mezzanineCModel', $object->models)) {
+        elseif (in_array($mezz_cmodel, $object->models)) {
           $pb_results = $pb_xml->xpath('pb:instantiationIdentifier/text()');
           if (!empty($pb_results)) {
             $path = (string) $pb_results[0];
@@ -1518,4 +1519,3 @@ function usc_mirc_export_objects_as_text($pids) {
     drupal_exit();
   }
 }
-
