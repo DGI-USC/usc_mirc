@@ -119,14 +119,13 @@ function usc_mirc_permission() {
  */
 function usc_mirc_ingest_access(FedoraObject $object) {
   $usc_models = array(
-    'usc:mirc',
     'usc:mezzanineCModel',
     'usc:collectionCModel',
     'usc:vroCModel',
   );
 
   if (user_access('administer usc_mirc')) {
-    if (array_intersect($usc_models, $object->models) || $object->id === 'usc:mirc') {
+    if (array_intersect($usc_models, $object->models)) {
       return TRUE;
     }
     else {
@@ -151,17 +150,7 @@ function usc_mirc_ingest_page(FedoraObject $object) {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
 
-  if ($object->id === 'usc:mirc') {
-    drupal_set_title(t('Add a new subcollection'));
-    return drupal_get_form('islandora_ingest_form', array(
-        'namespace' => 'usc',
-        'models' => array('usc:collectionCModel'),
-        'parent' => $object->id,
-        'collections' => array('usc:mirc'),
-      )
-    );
-  }
-  elseif (in_array('usc:mezzanineCModel', $object->models)) {
+  if (in_array('usc:mezzanineCModel', $object->models)) {
     drupal_set_title(t('Add a new access variant'));
     return drupal_get_form('islandora_ingest_form', array(
       'namespace' => 'usc',
@@ -325,10 +314,7 @@ function usc_mirc_usc_collectionCModel_islandora_xacml_editor_child_query($objec
  *   The title for the MENU_ACTION_LINK.
  */
 function usc_mirc_retrieve_ingest_title(FedoraObject $object) {
-  if ($object->id === 'usc:mirc') {
-    return t('Add a new subcollection');
-  }
-  elseif (in_array('usc:mezzanineCModel', $object->models)) {
+  if (in_array('usc:mezzanineCModel', $object->models)) {
     return t('Add a new access variant');
   }
   elseif (in_array('usc:collectionCModel', $object->models)) {
@@ -407,6 +393,13 @@ function usc_mirc_islandora_required_objects(IslandoraTuque $connection) {
   $usc_root_collection->label = 'Moving Image Research Collections';
   $usc_root_collection->models = 'islandora:collectionCModel';
   $usc_root_collection->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:root');
+
+  // Add the collection policy.
+  $cp = $usc_root_collection->constructDatastream('COLLECTION_POLICY', 'M');
+  $cp->label = 'Islandora Collection Policy';
+  $cp->mimetype = 'text/xml';
+  $cp->setContentFromFile("$module_path/data/datastreams/root_collection/COLLECTION_POLICY.xml", FALSE);
+  $usc_root_collection->ingestDatastream($cp);
 
   // USC Subcollection.
   $usc_collection = $connection->repository->constructObject('usc:collectionCModel');
@@ -1416,7 +1409,7 @@ function usc_mirc_build_child_links($object, $type, $children) {
   $fieldset = array(
     "$type" => array(
       '#type' => 'fieldset',
-      '#title' => t($type),
+      '#title' => $type,
     ),
   );
   if (count($links) > 0) {
@@ -1455,4 +1448,74 @@ function usc_mirc_islandora_solr_query($islandora_solr_query) {
     $fq = "+rels_hasModel_uri_ms:(usc\:mezzanineCModel usc\:collectionCModel usc\:vroCModel) +(pb_title_Main_ms:[* TO *] pb_parent_title_Main_ms:[* TO *] mods_title_s:[* TO *])";
   }
   $islandora_solr_query->solrParams['fq'][] = $fq;
+}
+
+/**
+ * Implements islandora_bookmark_export_handler().
+ */
+function usc_mirc_islandora_bookmark_export_handler() {
+  $usc_mirc = array();
+  $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
+  return $usc_mirc;
+}
+
+/**
+ * Performs USC's custom export functionality.
+ *
+ * @param array $pids
+ *   An array of pids ready for export.
+ */
+function usc_mirc_export_objects_as_text($pids) {
+  $path_export = array();
+  $mezz_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel');
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
+  foreach ($pids as $pid) {
+    $object = islandora_object_load($pid);
+    if ($object) {
+      $path = FALSE;
+      if ($object['PBCORE']) {
+        $pb_xml = simplexml_load_string($object['PBCORE']->content);
+        $pb_xml->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+        if (in_array($vro_cmodel, $object->models)) {
+          $pb_results = $pb_xml->xpath('pb:pbcoreInstantiation/pb:instantiationLocation/text()');
+          if (!empty($pb_results)) {
+            foreach ($pb_results as $result) {
+              $potential_path = (string) reset($result);
+              preg_match('/\/(.*)/', $potential_path, $path_match);
+              if (!empty($path_match)) {
+                $path = $path_match[0];
+                break;
+              }
+            }
+          }
+        }
+        elseif (in_array($mezz_cmodel, $object->models)) {
+          $pb_results = $pb_xml->xpath('pb:instantiationIdentifier/text()');
+          if (!empty($pb_results)) {
+            $path = (string) $pb_results[0];
+          }
+        }
+        if ($path) {
+          $path_export[] = $path;
+        }
+      }
+    }
+  }
+  if (!empty($path_export)) {
+    $export_text = fopen('php://output', 'w');
+    $count = 0;
+    foreach ($path_export as $path) {
+      if ($count == 0) {
+        fwrite($export_text, $path);
+      }
+      else {
+        fwrite($export_text, PHP_EOL . $path);
+      }
+      $count++;
+    }
+    fclose($export_text);
+    drupal_add_http_header('Content-Type', 'text/plain');
+    drupal_add_http_header('Content-Disposition', 'attachment;filename=my_video_export.txt');
+    drupal_exit();
+  }
 }
