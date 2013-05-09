@@ -4,6 +4,7 @@ configure = admin/islandora/mirc-usc
 dependencies[] = islandora
 dependencies[] = imagecache_external
 dependencies[] = taxonomy
+dependencies[] = islandora_xacml_api
 stylesheets[all][] = css/usc_mirc.css
 package = MIRC@SC
 version = 7.x-dev
