@@ -150,11 +150,13 @@ function usc_mirc_ingest_page(FedoraObject $object) {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
 
+  $step_object = $object->repository->constructObject('usc');
   if (in_array('usc:mezzanineCModel', $object->models)) {
     drupal_set_title(t('Add a new access variant'));
     return drupal_get_form('islandora_ingest_form', array(
       'namespace' => 'usc',
       'models' => array('usc:accessCModel'),
+      'objects' => array($step_object),
       'parent' => $object->id,
     ));
   }
@@ -163,6 +165,7 @@ function usc_mirc_ingest_page(FedoraObject $object) {
     return drupal_get_form('islandora_ingest_form', array(
         'namespace' => 'usc',
         'models' => array('usc:vroCModel'),
+        'objects' => array($step_object),
         'parent' => $object->id,
         'collections' => array($object->id),
       )
@@ -173,6 +176,7 @@ function usc_mirc_ingest_page(FedoraObject $object) {
     return drupal_get_form('islandora_ingest_form', array(
       'namespace' => 'usc',
       'models' => array('usc:mezzanineCModel'),
+      'objects' => array($step_object),
       'parent' => $object->id,
     ));
   }
