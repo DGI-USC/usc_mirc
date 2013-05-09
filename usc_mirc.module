@@ -63,6 +63,12 @@ function usc_mirc_menu() {
     'access arguments' => array('administer usc_mirc'),
     'type' => MENU_CALLBACK,
   );
+  $items['usc/create_access_copy'] = array(
+    'page callback' => 'usc_mirc_create_access_copy_callback',
+    'access arguments' => array(FEDORA_INGEST),
+    'file' => 'includes/access_copy.callback.inc',
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
