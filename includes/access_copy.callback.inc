@@ -48,7 +48,7 @@ function usc_mirc_create_access_copy_callback() {
   if ($parent_object) {
     module_load_include('inc', 'usc_mirc', 'includes/utilities');
     $params = usc_mirc_retrieve_pbcore_fields($parent_object);
-    usc_mirc_generate_video_metadata($video_path, $new_object);
+    usc_mirc_generate_video_metadata($video_path, $new_object, $params);
   }
   else {
     drupal_add_http_header('Status', 422);
