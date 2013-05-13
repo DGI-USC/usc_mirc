@@ -542,3 +542,177 @@ function usc_mirc_append_xacml_filter() {
   return $filter_string;
 }
 
+/**
+ * Generates PBCore and DC for an object and applies them to the same object.
+ *
+ * @param string $path
+ *   Path to the video file on the USC's file system.
+ * @param AbstractObject $object
+ *   A FedoraObject that is being created or modified.
+ * @param array $params
+ *   An associate array of parameters.
+ */
+function usc_mirc_generate_video_metadata($path, &$object, array $params) {
+  if (!(is_file($path) && is_readable($path))) {
+    throw new Exception("The file at $path does not seem to exist or is not readable!");
+  }
+  else {
+    $old_level = error_reporting(-1);
+
+    try {
+      // Grab media info output for the given file...
+      $command = 'mediainfo --Full --Output=XML ' . escapeshellarg($path);
+      $descriptor = array(
+        1 => array('pipe', 'w'),
+      );
+      $pipes = array();
+      $command = escapeshellcmd($command);
+      $media_proc = proc_open($command, $descriptor, $pipes);
+      $mediainfo_output = '';
+
+      if (!is_resource($media_proc)) {
+        watchdog("Error extracting metadata with Mediainfo for $object->id", array(), WATCHDOG_ERROR);
+        throw new Exception('Get outta here!');
+      }
+      else {
+        $mediainfo_output = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        $return_value = proc_close($media_proc);
+      }
+
+      $mediainfo_doc = new DOMDocument();
+      $mediainfo_doc->loadXML($mediainfo_output);
+
+      if (!$mediainfo_doc) {
+        watchdog('usc_mirc', "Mediainfo output failed to parse with DOMDocument for $object->id!", array(), WATCHDOG_ERROR);
+        throw new Exception('Mediainfo output failed to parse with DOMDocument!');
+      }
+
+      // Transform the mediainfo file to pbcore.
+      $pbcore_transform = new DOMDocument();
+      $pbcore_transform->load(drupal_get_path('module', 'usc_mirc') . '/transforms/mediainfo_to_pbcoreInstantiation.xsl');
+
+      if ($pbcore_transform === FALSE) {
+        watchdog('usc_mirc', "Failed to load transform for $object->id!", array(), WATCHDOG_ERROR);
+        throw new Exception('Get outta here!');
+      }
+      $transformer = new XSLTProcessor();
+      $transformer->importStylesheet($pbcore_transform);
+
+      $intermediate_pbcore = $transformer->transformToDoc($mediainfo_doc);
+      if (!$intermediate_pbcore) {
+        watchdog('usc_mirc', "Failed transforming Mediainfo XML to PBCore for $object->id!", array(), WATCHDOG_ERROR);
+        throw new Exception('Get outta here!');
+      }
+      // No longer need this (have the transformed version), free it up.
+      unset($mediainfo_doc);
+
+      $pbcore_xpath = new DOMXPath($intermediate_pbcore);
+      $pbcore_doc = $pbcore_xpath->document;
+      $pbcore_xpath->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+
+      $title = $params['label'];
+      $title_el = $pbcore_doc->createElement('instantiationAnnotation', $title);
+      $title_el->setAttribute('annotationType', 'instantiation_title');
+
+      foreach ($pbcore_xpath->query('//pb:instantiationEssenceTrack[pb:essenceTrackType/text()="Video"]/pb:essenceTrackFrameSize') as $format_el) {
+        $format_el->setAttribute('annotation', $params['derivative_format']);
+      }
+
+      $type_el = $pbcore_doc->createElement('instantiationGenerations', $params['derivative_type']);
+
+      $doc_el = $pbcore_doc->documentElement;
+      $doc_el->appendChild($title_el);
+      $doc_el->appendChild($type_el);
+
+      $pbcore_doc->normalizeDocument();
+      $pbcore = $pbcore_doc->saveXML();
+
+      // Create DC transformation of PBCore.
+      $dc_transform = new DOMDocument();
+      $dc_transform->load(drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xsl');
+      if (!$dc_transform) {
+        watchdog('usc_mirc', "Failed loading PBCore to DC transform for $object->id!", array(), WATCHDOG_ERROR);
+        throw new Exception('Get outta here!');
+      }
+      $transformer = new XSLTProcessor();
+      $transformer->importStyleSheet($dc_transform);
+
+      $pbcore_doc = new DOMDocument();
+      $pbcore_doc->loadXML($pbcore);
+      // XXX:  This seems to be necessary for some reason...  It seems to fail
+      // to get the newly added elements for the transform otherwise.
+      // DOMDocument, y u no work!?
+      $dc = $transformer->transformToXML($pbcore_doc);
+      if (!$dc) {
+        watchdog('usc_mirc', "Failed transforming PBCore XML to DC! for $object->id", array(), WATCHDOG_ERROR);
+        throw new Exception('Get outta here!');
+      }
+      // No longer need this (have it in a string), free it up.
+      unset($pbcore_doc);
+    }
+    catch (Exception $e) {
+      // Do nothing...
+    }
+    error_reporting($old_level);
+  }
+
+  // If we've properly created the metadata, create the Fedora Object.
+  if ($pbcore && $dc) {
+    if (!isset($object['DC'])) {
+      $dc_ds = $object->constructDatastream('DC', 'X');
+      $dc_ds->label = 'DC Record';
+      $dc_ds->mimetype = 'text/xml';
+      $dc_ds->setContentFromString($dc);
+      $object->ingestDatastream($dc_ds);
+    }
+    else {
+      $object['DC']->content = $dc;
+    }
+
+    $pbcore_ds = $object->constructDatastream('PBCORE', 'X');
+    $pbcore_ds->label = 'PBCORE Record';
+    $pbcore_ds->mimetype = 'text/xml';
+    $pbcore_ds->setContentFromString($pbcore);
+    $object->ingestDatastream($pbcore_ds);
+  }
+  else {
+    watchdog('usc_mirc', "PBCore or DC metadata not present for $object->id!", array(), WATCHDOG_ERROR);
+  }
+}
+
+/**
+ * XPATHs PBCore to construct an array of parameters used elsewhere.
+ *
+ * @see usc_mirc_generate_video_metadata()
+ *
+ * @param AbstractObject $object
+ *   A Fedora object.
+ *
+ * @return mixed
+ *   An array of parameters or FALSE if an XPATH fails to retrieve metadata.
+ */
+function usc_mirc_retrieve_pbcore_fields($object) {
+  $params = array(
+    'label' => $object->label,
+  );
+  $pbcore_xml = simplexml_load_string($object['PBCORE']->content);
+  $pbcore_xml->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+  $type_result = $pbcore_xml->xpath('//pb:instantiationGenerations/text()');
+
+  if (!empty($type_result)) {
+    $params['derivative_type'] = (string) reset($type_result);
+  }
+
+  $format_result = $pbcore_xml->xpath('//pb:instantiationEssenceTrack[pb:essenceTrackType/text()="Video"]/pb:essenceTrackFrameSize/@annotation');
+  if (!empty($format_result)) {
+    $params['derivative_format'] = (string) reset($format_result);
+  }
+
+  if (isset($params['derivative_format']) && isset($params['derivative_type'])) {
+    return $params;
+  }
+  else {
+    return FALSE;
+  }
+}
