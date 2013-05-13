@@ -552,7 +552,7 @@ function usc_mirc_append_xacml_filter() {
  * @param array $params
  *   An associate array of parameters.
  */
-function usc_mirc_generate_video_metadata($path, &$object, array $params) {
+function usc_mirc_generate_video_metadata($path, AbstractObject $object, array $params) {
   if (!(is_file($path) && is_readable($path))) {
     throw new Exception("The file at $path does not seem to exist or is not readable!");
   }
@@ -571,8 +571,9 @@ function usc_mirc_generate_video_metadata($path, &$object, array $params) {
       $mediainfo_output = '';
 
       if (!is_resource($media_proc)) {
-        watchdog("Error extracting metadata with Mediainfo for $object->id", array(), WATCHDOG_ERROR);
-        throw new Exception('Get outta here!');
+        throw new Exception(t('Error extracting metadata with Mediainfo for @object_id.', array(
+          '@object_id' => $object->id,
+        )));
       }
       else {
         $mediainfo_output = stream_get_contents($pipes[1]);
@@ -584,8 +585,9 @@ function usc_mirc_generate_video_metadata($path, &$object, array $params) {
       $mediainfo_doc->loadXML($mediainfo_output);
 
       if (!$mediainfo_doc) {
-        watchdog('usc_mirc', "Mediainfo output failed to parse with DOMDocument for $object->id!", array(), WATCHDOG_ERROR);
-        throw new Exception('Mediainfo output failed to parse with DOMDocument!');
+        throw new Exception(t('Mediainfo output failed to parse with DOMDocument for @object_id!', array(
+          '@object_id' => $object->id,
+        )));
       }
 
       // Transform the mediainfo file to pbcore.
@@ -593,16 +595,18 @@ function usc_mirc_generate_video_metadata($path, &$object, array $params) {
       $pbcore_transform->load(drupal_get_path('module', 'usc_mirc') . '/transforms/mediainfo_to_pbcoreInstantiation.xsl');
 
       if ($pbcore_transform === FALSE) {
-        watchdog('usc_mirc', "Failed to load transform for $object->id!", array(), WATCHDOG_ERROR);
-        throw new Exception('Get outta here!');
+        throw new Exception(t('Failed to load transform for @object_id!', array(
+          '@object_id' => $object->id,
+        )));
       }
       $transformer = new XSLTProcessor();
       $transformer->importStylesheet($pbcore_transform);
 
       $intermediate_pbcore = $transformer->transformToDoc($mediainfo_doc);
       if (!$intermediate_pbcore) {
-        watchdog('usc_mirc', "Failed transforming Mediainfo XML to PBCore for $object->id!", array(), WATCHDOG_ERROR);
-        throw new Exception('Get outta here!');
+        throw new Exception(t('Failed transforming Mediainfo XML to PBCore for @object_id!', array(
+          '@object_id' => $object->id,
+        )));
       }
       // No longer need this (have the transformed version), free it up.
       unset($mediainfo_doc);
@@ -632,8 +636,9 @@ function usc_mirc_generate_video_metadata($path, &$object, array $params) {
       $dc_transform = new DOMDocument();
       $dc_transform->load(drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xsl');
       if (!$dc_transform) {
-        watchdog('usc_mirc', "Failed loading PBCore to DC transform for $object->id!", array(), WATCHDOG_ERROR);
-        throw new Exception('Get outta here!');
+        throw new Exception(t('Failed loading PBCore to DC transform for @object_id.', array(
+          '@object_id' => $object->id,
+        )));
       }
       $transformer = new XSLTProcessor();
       $transformer->importStyleSheet($dc_transform);
@@ -645,14 +650,16 @@ function usc_mirc_generate_video_metadata($path, &$object, array $params) {
       // DOMDocument, y u no work!?
       $dc = $transformer->transformToXML($pbcore_doc);
       if (!$dc) {
-        watchdog('usc_mirc', "Failed transforming PBCore XML to DC! for $object->id", array(), WATCHDOG_ERROR);
-        throw new Exception('Get outta here!');
+        throw new Exception(t('Failed transforming PBCore XML to DC for @object_id.', array(
+          '@object_id' => $object->id,
+        )));
       }
       // No longer need this (have it in a string), free it up.
       unset($pbcore_doc);
     }
     catch (Exception $e) {
-      // Do nothing...
+      // Log the error.
+      watchdog_exception('usc_mirc', $e);
     }
     error_reporting($old_level);
   }
@@ -677,7 +684,9 @@ function usc_mirc_generate_video_metadata($path, &$object, array $params) {
     $object->ingestDatastream($pbcore_ds);
   }
   else {
-    watchdog('usc_mirc', "PBCore or DC metadata not present for $object->id!", array(), WATCHDOG_ERROR);
+    watchdog('usc_mirc', 'PBCore or DC metadata not present for @object_id!', array(
+      '@object_id' => $object->id,
+    ), WATCHDOG_ERROR);
   }
 }
 
@@ -696,6 +705,14 @@ function usc_mirc_retrieve_pbcore_fields($object) {
   $params = array(
     'label' => $object->label,
   );
+
+  if (!isset($object['PBCORE'])) {
+    watchdog('usc_mirc', 'The object "@object_id" does not have any PBCore!', array(
+      '@object_id' => $object->id,
+    ), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
   $pbcore_xml = simplexml_load_string($object['PBCORE']->content);
   $pbcore_xml->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
   $type_result = $pbcore_xml->xpath('//pb:instantiationGenerations/text()');
