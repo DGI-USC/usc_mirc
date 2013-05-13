@@ -156,29 +156,29 @@ function usc_mirc_ingest_page(FedoraObject $object) {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
 
+  $step_object = $object->repository->constructObject('usc');
   if (in_array('usc:mezzanineCModel', $object->models)) {
     drupal_set_title(t('Add a new access variant'));
     return drupal_get_form('islandora_ingest_form', array(
-      'namespace' => 'usc',
       'models' => array('usc:accessCModel'),
+      'objects' => array($step_object),
       'parent' => $object->id,
     ));
   }
   elseif (in_array('usc:collectionCModel', $object->models)) {
     drupal_set_title(t('Add a new preservation master'));
+    $step_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $object->id);
     return drupal_get_form('islandora_ingest_form', array(
-        'namespace' => 'usc',
-        'models' => array('usc:vroCModel'),
-        'parent' => $object->id,
-        'collections' => array($object->id),
-      )
-    );
+      'models' => array('usc:vroCModel'),
+      'objects' => array($step_object),
+      'parent' => $object->id,
+    ));
   }
   elseif (in_array('usc:vroCModel', $object->models)) {
     drupal_set_title(t('Add a new mezzanine'));
     return drupal_get_form('islandora_ingest_form', array(
-      'namespace' => 'usc',
       'models' => array('usc:mezzanineCModel'),
+      'objects' => array($step_object),
       'parent' => $object->id,
     ));
   }
