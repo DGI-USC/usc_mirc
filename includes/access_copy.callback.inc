@@ -70,6 +70,11 @@ function usc_mirc_create_access_copy_callback() {
   $thumbnail_datastream->setContentFromFile($thumbnail_path);
   $new_object->ingestDatastream($thumbnail_datastream);
 
+  // Add the XACML to the new access copy if present.
+  if (isset($parent_object['POLICY'])) {
+    $new_object->ingestDatastream($parent_object['POLICY']);
+  }
+
   // Ingest the access copy.
   islandora_add_object($new_object);
 
