@@ -111,6 +111,9 @@ function usc_mirc_permission() {
     'administer usc_mirc' => array(
       'title' => 'Administer the MIRC@SC custom module.',
     ),
+    'access USC video export' => array(
+      'title' => 'Let users export MyVideo lists with paths in them.'
+    )
   );
 }
 
@@ -1381,9 +1384,11 @@ function usc_mirc_islandora_solr_query($islandora_solr_query) {
  * Implements islandora_bookmark_export_handler().
  */
 function usc_mirc_islandora_bookmark_export_handler() {
-  $usc_mirc = array();
-  $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
-  return $usc_mirc;
+  if (user_access('access USC video export')) {
+    $usc_mirc = array();
+    $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
+    return $usc_mirc;
+  }
 }
 
 /**
