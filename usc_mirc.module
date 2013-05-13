@@ -1381,9 +1381,12 @@ function usc_mirc_islandora_solr_query($islandora_solr_query) {
  * Implements islandora_bookmark_export_handler().
  */
 function usc_mirc_islandora_bookmark_export_handler() {
-  $usc_mirc = array();
-  $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
-  return $usc_mirc;
+  global $user;
+  if ($user->uid != 0) {
+    $usc_mirc = array();
+    $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
+    return $usc_mirc;
+  }
 }
 
 /**
