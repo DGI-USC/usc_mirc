@@ -25,10 +25,8 @@
     <xsl:template match="pbcore:pbcoreInstantiationDocument/pbcore:instantiationIdentifier[@source='hdl']"/>
     
     <xsl:template match="node()|@*">
-        <xsl:if test="normalize-space(current())">
-            <xsl:copy>
-                <xsl:apply-templates select="node()|@*"/>
-            </xsl:copy>
-        </xsl:if>
+        <xsl:copy>
+            <xsl:apply-templates select="node()|@*"/>
+        </xsl:copy>
     </xsl:template>
 </xsl:stylesheet>
