@@ -63,6 +63,12 @@ function usc_mirc_menu() {
     'access arguments' => array('administer usc_mirc'),
     'type' => MENU_CALLBACK,
   );
+  $items['usc/create_access_copy'] = array(
+    'page callback' => 'usc_mirc_create_access_copy_callback',
+    'access arguments' => array(FEDORA_INGEST),
+    'file' => 'includes/access_copy.callback.inc',
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
@@ -105,6 +111,9 @@ function usc_mirc_permission() {
     'administer usc_mirc' => array(
       'title' => 'Administer the MIRC@SC custom module.',
     ),
+    'access USC video export' => array(
+      'title' => 'Let users export MyVideo lists with paths in them.'
+    )
   );
 }
 
@@ -119,14 +128,13 @@ function usc_mirc_permission() {
  */
 function usc_mirc_ingest_access(FedoraObject $object) {
   $usc_models = array(
-    'usc:mirc',
     'usc:mezzanineCModel',
     'usc:collectionCModel',
     'usc:vroCModel',
   );
 
   if (user_access('administer usc_mirc')) {
-    if (array_intersect($usc_models, $object->models) || $object->id === 'usc:mirc') {
+    if (array_intersect($usc_models, $object->models)) {
       return TRUE;
     }
     else {
@@ -151,39 +159,29 @@ function usc_mirc_ingest_page(FedoraObject $object) {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
 
-  if ($object->id === 'usc:mirc') {
-    drupal_set_title(t('Add a new subcollection'));
-    return drupal_get_form('islandora_ingest_form', array(
-        'namespace' => 'usc',
-        'models' => array('usc:collectionCModel'),
-        'parent' => $object->id,
-        'collections' => array('usc:mirc'),
-      )
-    );
-  }
-  elseif (in_array('usc:mezzanineCModel', $object->models)) {
+  $step_object = $object->repository->constructObject('usc');
+  if (in_array('usc:mezzanineCModel', $object->models)) {
     drupal_set_title(t('Add a new access variant'));
     return drupal_get_form('islandora_ingest_form', array(
-      'namespace' => 'usc',
       'models' => array('usc:accessCModel'),
+      'objects' => array($step_object),
       'parent' => $object->id,
     ));
   }
   elseif (in_array('usc:collectionCModel', $object->models)) {
     drupal_set_title(t('Add a new preservation master'));
+    $step_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $object->id);
     return drupal_get_form('islandora_ingest_form', array(
-        'namespace' => 'usc',
-        'models' => array('usc:vroCModel'),
-        'parent' => $object->id,
-        'collections' => array($object->id),
-      )
-    );
+      'models' => array('usc:vroCModel'),
+      'objects' => array($step_object),
+      'parent' => $object->id,
+    ));
   }
   elseif (in_array('usc:vroCModel', $object->models)) {
     drupal_set_title(t('Add a new mezzanine'));
     return drupal_get_form('islandora_ingest_form', array(
-      'namespace' => 'usc',
       'models' => array('usc:mezzanineCModel'),
+      'objects' => array($step_object),
       'parent' => $object->id,
     ));
   }
@@ -325,10 +323,7 @@ function usc_mirc_usc_collectionCModel_islandora_xacml_editor_child_query($objec
  *   The title for the MENU_ACTION_LINK.
  */
 function usc_mirc_retrieve_ingest_title(FedoraObject $object) {
-  if ($object->id === 'usc:mirc') {
-    return t('Add a new subcollection');
-  }
-  elseif (in_array('usc:mezzanineCModel', $object->models)) {
+  if (in_array('usc:mezzanineCModel', $object->models)) {
     return t('Add a new access variant');
   }
   elseif (in_array('usc:collectionCModel', $object->models)) {
@@ -407,6 +402,13 @@ function usc_mirc_islandora_required_objects(IslandoraTuque $connection) {
   $usc_root_collection->label = 'Moving Image Research Collections';
   $usc_root_collection->models = 'islandora:collectionCModel';
   $usc_root_collection->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:root');
+
+  // Add the collection policy.
+  $cp = $usc_root_collection->constructDatastream('COLLECTION_POLICY', 'M');
+  $cp->label = 'Islandora Collection Policy';
+  $cp->mimetype = 'text/xml';
+  $cp->setContentFromFile("$module_path/data/datastreams/root_collection/COLLECTION_POLICY.xml", FALSE);
+  $usc_root_collection->ingestDatastream($cp);
 
   // USC Subcollection.
   $usc_collection = $connection->repository->constructObject('usc:collectionCModel');
@@ -1007,109 +1009,6 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
       '%file_name' => isset($form['file_name']['#options']) ? $form['file_name']['#options'][$file] : '',
     )));
   }
-  else {
-    $old_level = error_reporting(-1);
-    try {
-      $parent_object = islandora_object_load($form_state['islandora']['shared_storage']['parent']);
-      // Grab media info output for the given file...
-      $command = 'mediainfo --Full --Output=XML ' . escapeshellarg($values['file_name']);
-      $descriptor = array(
-        1 => array('pipe', 'w'),
-      );
-      $pipes = array();
-      $command = escapeshellcmd($command);
-      $media_proc = proc_open($command, $descriptor, $pipes);
-      $mediainfo_output = '';
-
-      if (!is_resource($media_proc)) {
-        form_set_error('file_name', t('Error extracting metadata with Mediainfo!'));
-        throw new Exception('Get outta here!');
-      }
-      else {
-        $mediainfo_output = stream_get_contents($pipes[1]);
-        fclose($pipes[1]);
-        $return_value = proc_close($media_proc);
-      }
-
-      $mediainfo_doc = new DOMDocument();
-      $mediainfo_doc->loadXML($mediainfo_output);
-
-      if (!$mediainfo_doc) {
-        form_set_error('', t('Mediainfo output failed to parse with DOMDocument!'));
-        throw new Exception('Get outta here!');
-      }
-
-      // Transform the mediainfo file to pbcore.
-      $pbcore_transform = new DOMDocument();
-      $pbcore_transform->load(drupal_get_path('module', 'usc_mirc') . '/transforms/mediainfo_to_pbcoreInstantiation.xsl');
-
-      if ($pbcore_transform === FALSE) {
-        watchdog('usc_mirc', 'Failed to load transform!', array(), WATCHDOG_ERROR);
-        throw new Exception('Get outta here!');
-      }
-      $transformer = new XSLTProcessor();
-      $transformer->importStylesheet($pbcore_transform);
-
-      $intermediate_pbcore = $transformer->transformToDoc($mediainfo_doc);
-      if (!$intermediate_pbcore) {
-        form_set_error('', t('Failed transforming Mediainfo XML to PBCore!'));
-        throw new Exception('Get outta here!');
-      }
-      // No longer need this (have the transformed version), free it up.
-      unset($mediainfo_doc);
-
-      $pbcore_xpath = new DOMXPath($intermediate_pbcore);
-      $pbcore_doc = $pbcore_xpath->document;
-      $pbcore_xpath->registerNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
-
-      // Add the title, type and format fields.
-      $title = $parent_object->label;
-      $form_state['usc_mirc']['title'] = $title;
-
-      $title_el = $pbcore_doc->createElement('instantiationAnnotation', $title);
-      $title_el->setAttribute('annotationType', 'instantiation_title');
-
-      foreach ($pbcore_xpath->query('//pb:instantiationEssenceTrack[pb:essenceTrackType/text()="Video"]/pb:essenceTrackFrameSize') as $format_el) {
-        $format_el->setAttribute('annotation', $values['derivative_format']);
-      }
-
-      $type_el = $pbcore_doc->createElement('instantiationGenerations', $values['derivative_type']);
-
-      $doc_el = $pbcore_doc->documentElement;
-      $doc_el->appendChild($title_el);
-      $doc_el->appendChild($type_el);
-
-      $pbcore_doc->normalizeDocument();
-      $form_state['usc_mirc']['pbcore'] = $pbcore = $pbcore_doc->saveXML();
-
-      // Create DC transformation of PBCore.
-      $dc_transform = new DOMDocument();
-      $dc_transform->load(drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xsl');
-      if (!$dc_transform) {
-        form_set_error('', t('Failed loading PBCore to DC transform!'));
-        throw new Exception('Get outta here!');
-      }
-      $transformer = new XSLTProcessor();
-      $transformer->importStyleSheet($dc_transform);
-
-      $pbcore_doc = new DOMDocument();
-      $pbcore_doc->loadXML($pbcore);
-      // XXX:  This seems to be necessary for some reason...  It seems to fail
-      // to get the newly added elements for the transform otherwise.
-      // DOMDocument, y u no work!?
-      $form_state['usc_mirc']['dc'] = $dc = $transformer->transformToXML($pbcore_doc);
-      if (!$dc) {
-        form_set_error('', t('Failed transforming PBCore XML to DC!'));
-        throw new Exception('Get outta here!');
-      }
-      // No longer need this (have it in a string), free it up.
-      unset($pbcore_doc);
-    }
-    catch (Exception $e) {
-      // Do nothing...
-    }
-    error_reporting($old_level);
-  }
 }
 
 /**
@@ -1124,33 +1023,23 @@ function usc_mirc_add_mezzanine_form_validate($form, &$form_state) {
  *   The Drupal form state.
  */
 function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
-  $pbcore = $form_state['usc_mirc']['pbcore'];
-  $dc = $form_state['usc_mirc']['dc'];
-  $title = $form_state['usc_mirc']['title'];
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
 
-  // If we've properly created the metadata, create the Fedora Object.
-  if ($pbcore && $dc) {
-    $object = $form_state['islandora']['objects'][0];
-    $object->label = $title;
-    $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $form_state['islandora']['shared_storage']['parent']);
-    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel'));
+  $parent_object = islandora_object_load($form_state['islandora']['shared_storage']['parent']);
+  $object = $form_state['islandora']['objects'][0];
+  $object->label = $parent_object->label;
+  $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $form_state['islandora']['shared_storage']['parent']);
+  $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel'));
+  $params = array(
+    'label' => $parent_object->label,
+    'derivative_type' => $form_state['values']['derivative_type'],
+    'derivative_format' => $form_state['values']['derivative_format'],
+  );
+  usc_mirc_generate_video_metadata($form_state['values']['file_name'], $object, $params);
+  $form_state['redirect'] = "islandora/object/$object->id";
 
-    $dc_ds = $object->constructDatastream('DC', 'X');
-    $dc_ds->label = 'DC Record';
-    $dc_ds->mimetype = 'text/xml';
-    $dc_ds->setContentFromString($dc);
-    $object->ingestDatastream($dc_ds);
-
-    $pbcore_ds = $object->constructDatastream('PBCORE', 'X');
-    $pbcore_ds->label = 'PBCORE Record';
-    $pbcore_ds->mimetype = 'text/xml';
-    $pbcore_ds->setContentFromString($pbcore);
-    $object->ingestDatastream($pbcore_ds);
-
-    $form_state['redirect'] = "islandora/object/$object->id";
-  }
-  else {
-    drupal_set_message(t('PBCore or DC metadata not present!'), 'error');
+  if (!isset($object['PBCORE']) || !isset($object['DC'])) {
+    watchdog('usc_mirc', "The object $object->id is missing PBCore or DC!", array(), WATCHDOG_ERROR);
   }
 }
 
@@ -1185,6 +1074,31 @@ function usc_mirc_add_access_variant_form($form, &$form_state) {
 }
 
 /**
+ * Validation for the add access variant form.
+ *
+ * @param array $form
+ *   A Drupal form.
+ * @param array $form_state
+ *   The Drupal form state.
+ */
+function usc_mirc_add_access_variant_form_validate($form, &$form_state) {
+  // Need to "convert" the streaming URL to the path on the local file system.
+  $streaming_url = variable_get('usc_mirc_streaming_url', 'http://dvr-streaming.mirc.sc.edu');
+  if (strpos($form_state['values']['streaming_url'], $streaming_url) === 0) {
+    $local_path = format_string('!local_access/!file_part', array(
+      '!local_access' => variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access'),
+      '!file_part' => drupal_substr($form_state['values']['streaming_url'], drupal_strlen($streaming_url) + 1),
+    ));
+    $form_state['local_path'] = $local_path;
+  }
+  if (!is_null($local_path) && !(is_file($local_path) && is_readable($local_path))) {
+    form_set_error('streaming_url', t('The streaming URL does not correspond to a file that exists or is not readable at %file_path', array(
+      '%file_path' => $local_path,
+    )));
+  }
+}
+
+/**
  * Submit handler for the access variant form.
  *
  * @global type $user
@@ -1196,6 +1110,7 @@ function usc_mirc_add_access_variant_form($form, &$form_state) {
  *   The Drupal form state.
  */
 function usc_mirc_add_access_variant_form_submit($form, &$form_state) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $object = $form_state['islandora']['objects'][0];
   $object->label = $form_state['values']['title'];
   $video_ds = $object->constructDatastream('VIDEO', 'R');
@@ -1206,6 +1121,14 @@ function usc_mirc_add_access_variant_form_submit($form, &$form_state) {
   $object->relationships->add(FEDORA_RELS_EXT_URI, 'isDerivativeOf', $form_state['islandora']['shared_storage']['parent']);
   $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', variable_get('usc_mirc_cmodel_access', 'usc:accessCModel'));
   $form_state['redirect'] = "islandora/object/$object->id";
+  $parent_object = islandora_object_load($form_state['islandora']['shared_storage']['parent']);
+  $params = usc_mirc_retrieve_pbcore_fields($parent_object);
+
+  usc_mirc_generate_video_metadata($form_state['local_path'], $object, $params);
+
+  if (!isset($object['PBCORE']) || !isset($object['DC'])) {
+    watchdog('usc_mirc', "The object $object->id is missing PBCore or DC!", array(), WATCHDOG_ERROR);
+  }
 }
 
 /**
@@ -1416,7 +1339,7 @@ function usc_mirc_build_child_links($object, $type, $children) {
   $fieldset = array(
     "$type" => array(
       '#type' => 'fieldset',
-      '#title' => t($type),
+      '#title' => $type,
     ),
   );
   if (count($links) > 0) {
@@ -1461,9 +1384,11 @@ function usc_mirc_islandora_solr_query($islandora_solr_query) {
  * Implements islandora_bookmark_export_handler().
  */
 function usc_mirc_islandora_bookmark_export_handler() {
-  $usc_mirc = array();
-  $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
-  return $usc_mirc;
+  if (user_access('access USC video export')) {
+    $usc_mirc = array();
+    $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
+    return $usc_mirc;
+  }
 }
 
 /**
@@ -1474,6 +1399,8 @@ function usc_mirc_islandora_bookmark_export_handler() {
  */
 function usc_mirc_export_objects_as_text($pids) {
   $path_export = array();
+  $mezz_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel');
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
   foreach ($pids as $pid) {
     $object = islandora_object_load($pid);
     if ($object) {
@@ -1481,9 +1408,8 @@ function usc_mirc_export_objects_as_text($pids) {
       if ($object['PBCORE']) {
         $pb_xml = simplexml_load_string($object['PBCORE']->content);
         $pb_xml->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
-        if (in_array('usc:vroCModel', $object->models)) {
+        if (in_array($vro_cmodel, $object->models)) {
           $pb_results = $pb_xml->xpath('pb:pbcoreInstantiation/pb:instantiationLocation/text()');
-          dsm($pb_results);
           if (!empty($pb_results)) {
             foreach ($pb_results as $result) {
               $potential_path = (string) reset($result);
@@ -1495,7 +1421,7 @@ function usc_mirc_export_objects_as_text($pids) {
             }
           }
         }
-        elseif (in_array('usc:mezzanineCModel', $object->models)) {
+        elseif (in_array($mezz_cmodel, $object->models)) {
           $pb_results = $pb_xml->xpath('pb:instantiationIdentifier/text()');
           if (!empty($pb_results)) {
             $path = (string) $pb_results[0];
