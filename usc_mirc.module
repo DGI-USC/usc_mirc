@@ -1526,3 +1526,26 @@ function usc_mirc_export_objects_as_text($pids) {
   }
 }
 
+function usc_mirc_cron_queue_info() {
+  $queues['usc_mirc_pbcore_export'] = array(
+    'worker callback' => 'usc_mirc_process_pbcore_queue_item'
+  );
+  return $queues;
+}
+
+function usc_mirc_cron() {
+  $last_export_time = drupal_variable_get("usc_mirc_last_pbcore_export", 0);
+
+  $now = time();
+
+
+  $queue = DrupalQueue::get('usc_mirc_pbcore_export');
+
+  for ($i = 0; $i < 100; $i++) {
+    $queue->createItem("DERPA DOODLE DANDY $i");
+  }
+}
+
+function usc_mirc_process_pbcore_queue_item($item) {
+  dd($item);
+}
