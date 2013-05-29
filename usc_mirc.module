@@ -112,8 +112,8 @@ function usc_mirc_permission() {
       'title' => 'Administer the MIRC@SC custom module.',
     ),
     'access USC video export' => array(
-      'title' => 'Let users export MyVideo lists with paths in them.'
-    )
+      'title' => 'Let users export MyVideo lists with paths in them.',
+    ),
   );
 }
 
@@ -1039,7 +1039,7 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
   $form_state['redirect'] = "islandora/object/$object->id";
 
   if (!isset($object['PBCORE']) || !isset($object['DC'])) {
-    watchdog('usc_mirc', "The object $object->id is missing PBCore or DC!", array(), WATCHDOG_ERROR);
+    watchdog('usc_mirc', "The object @obj is missing PBCore or DC!", array('@obj' => $object->id), WATCHDOG_ERROR);
   }
 }
 
@@ -1127,7 +1127,7 @@ function usc_mirc_add_access_variant_form_submit($form, &$form_state) {
   usc_mirc_generate_video_metadata($form_state['local_path'], $object, $params);
 
   if (!isset($object['PBCORE']) || !isset($object['DC'])) {
-    watchdog('usc_mirc', "The object $object->id is missing PBCore or DC!", array(), WATCHDOG_ERROR);
+    watchdog('usc_mirc', "The object @obj is missing PBCore or DC!", array('@obj' => $object->id), WATCHDOG_ERROR);
   }
 }
 
