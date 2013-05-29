@@ -69,6 +69,14 @@ function usc_mirc_menu() {
     'file' => 'includes/access_copy.callback.inc',
     'type' => MENU_CALLBACK,
   );
+  $items['islandora/object/%islandora_object/manage/overview/usc-mirc-export-pbcore'] = array(
+    'title' => "Export PBCORE",
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('usc_mirc_export_collection_confirm_form', 2),
+    'access callback' => 'usc_mirc_pbcore_export_access',
+    'access arguments' => array(2),
+    'type' => MENU_LOCAL_ACTION,
+  );
   return $items;
 }
 
@@ -1452,26 +1460,82 @@ function usc_mirc_export_objects_as_text($pids) {
   }
 }
 
-function usc_mirc_cron_queue_info() {
-  $queues['usc_mirc_pbcore_export'] = array(
-    'worker callback' => 'usc_mirc_process_pbcore_queue_item'
-  );
-  return $queues;
-}
-
-function usc_mirc_cron() {
-  $last_export_time = drupal_variable_get("usc_mirc_last_pbcore_export", 0);
-
-  $now = time();
-
-
-  $queue = DrupalQueue::get('usc_mirc_pbcore_export');
-
-  for ($i = 0; $i < 100; $i++) {
-    $queue->createItem("DERPA DOODLE DANDY $i");
+function usc_mirc_pbcore_export_access($obj) {
+  if (in_array('usc:collectionCModel', $obj->models)) {
+    if (user_access('administer usc_mirc')) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    return FALSE;
   }
 }
 
-function usc_mirc_process_pbcore_queue_item($item) {
-  dd($item);
+function usc_mirc_cron() {
+  usc_mirc_export_pbcore();
+  usc_mirc_stamp_export_time();
+}
+
+function usc_mirc_export_pbcore() {
+  // Get the time of last export, defaulting to the beginning of the epoch if
+  // this is the first export.  The time is formatted as a string that mulgara
+  // can work with.
+  $last_export_time = variable_get("usc_mirc_last_pbcore_export", usc_mirc_format_time(0));
+
+  // Get the cmodel from preservation master records.
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
+
+  // Query for all preservation masters that have been updated since last
+  // export.
+  $query = 'select $obj $time
+            from <#ri>
+            where $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
+                  and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
+                  and $time <mulgara:after> \'' . $last_export_time . '\'^^<xml-schema:dateTime> in <#xsd>';
+
+  $tuque = islandora_get_tuque_connection();
+  $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
+
+  // Get the output directory from the database.
+  $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch');
+
+  // Iterate over the result set and export each pbcore datastream to a file in
+  // the output directory.
+  foreach ($results as $result) {
+    $pid = $result['obj']['value'];
+    $obj = islandora_object_load($pid);
+    $pbcore = $obj['PBCORE'];
+    $file_path = $output_dir . '/' . str_replace(":", "_", $pid) . '_pbcore.xml';
+    $fp = fopen($file_path, 'w');
+    fwrite($fp, $pbcore->content);
+    fclose($fp);
+  }
+}
+
+function usc_mirc_stamp_export_time() {
+  // Get the current time (also formatted for mulgara).
+  $now = usc_mirc_format_time(time());
+
+  // Set it as the last export time in the db.
+  variable_set('usc_mirc_last_pbcore_export', $now);
+}
+
+function usc_mirc_format_time($time) {
+  return date('Y-m-d\TH:i:s\Z', $time);
+}
+
+function usc_mirc_export_collection_confirm_form($form, &$form_state, $obj) {
+  $form = confirm_form(
+    array(),
+    t(
+      "Are you sure you want to export PBCORE datastreams in @coll?",
+      array('@coll' => $obj->label)
+    ),
+    'islandora/object/' . $obj->id . '/manage'
+  );
+  dd($form);
+  return $form;
 }
