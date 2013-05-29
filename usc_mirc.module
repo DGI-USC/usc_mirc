@@ -1503,8 +1503,10 @@ function usc_mirc_cron() {
 
   // Get the output directory from the database.
   $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch');
-
-  $log_path = $output_dir . '/pbcore_export.log';
+  if (substr($output_dir, -1) != '/') {
+    $output_dir .= '/';
+  }
+  $log_path = $output_dir . 'pbcore_export.log';
   $log_fp = fopen($log_path, 'a');
 
   try {
@@ -1516,7 +1518,7 @@ function usc_mirc_cron() {
     if (!empty($results)) {
       foreach ($results as $result) {
         $pid = $result['obj']['value'];
-        $output_path = $output_dir . '/' . str_replace(":", "_", $pid) . '_pbcore.xml';
+        $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
         usc_mirc_export_pbcore($pid, $output_path);
         usc_mirc_log_pbcore_export_record($log_fp, $output_path);
       }
@@ -1641,8 +1643,10 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
 
   // Get the output directory from the database.
   $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch');
-
-  $log_path = $output_dir . '/pbcore_export.log';
+  if (substr($output_dir, -1) != '/') {
+    $output_dir .= '/';
+  }
+  $log_path = $output_dir . 'pbcore_export.log';
   $log_fp = fopen($log_path, 'a');
 
   try {
@@ -1654,7 +1658,7 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
     if (!empty($results)) {
       foreach ($results as $result) {
         $pid = $result['obj']['value'];
-        $output_path = $output_dir . '/' . str_replace(":", "_", $pid) . '_pbcore.xml';
+        $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
         usc_mirc_export_pbcore($pid, $output_path);
         usc_mirc_log_pbcore_export_record($log_fp, $output_path);
       }
