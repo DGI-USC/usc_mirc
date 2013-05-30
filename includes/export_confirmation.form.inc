@@ -128,14 +128,14 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
     // Redirect back to the manage overlay.
     $redirect = array('islandora/object/' . $obj->id . '/manage');
     $form_state['redirect'] = $redirect;
-    drupal_set_message("No PBCORE records in {$obj->id} have been updated since the last export on $last_export_time");
+    drupal_set_message(check_plain("No PBCORE records in {$obj->id} have been updated since the last export on $last_export_time"));
   }
 }
 
 /**
  * The export operation for a single record in the batch.
  *
- * Exports the pbcore for the object with the supplied pid and writes the 
+ * Exports the pbcore for the object with the supplied pid and writes the
  * appropriate entry in the export manifest log.
  *
  * @param string $pid
@@ -190,7 +190,7 @@ function usc_mirc_pbcore_export_batch_operation($pid, $output_dir, $coll, &$cont
  * Closes the export manifest log for the batch that just ended.
  *
  * @param bool $success
- *   Boolean indicating whether or not there were errors during the batch 
+ *   Boolean indicating whether or not there were errors during the batch
  *   processing.
  *
  * @param array $results

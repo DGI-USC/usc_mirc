@@ -39,7 +39,7 @@ function usc_mirc_create_access_copy_callback() {
   else {
     // Didn't find the video file... Report as much.
     drupal_add_http_header('Status', 404);
-    echo ('Video not in expected streaming path.');
+    echo('Video not in expected streaming path.');
     drupal_exit();
   }
 
@@ -53,7 +53,7 @@ function usc_mirc_create_access_copy_callback() {
   }
   else {
     drupal_add_http_header('Status', 422);
-    echo ('The parent mezzanine could not be loaded.');
+    echo('The parent mezzanine could not be loaded.');
     drupal_exit();
   }
 
