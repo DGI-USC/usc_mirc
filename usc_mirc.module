@@ -73,6 +73,7 @@ function usc_mirc_menu() {
     'title' => "Export PBCORE",
     'page callback' => 'drupal_get_form',
     'page arguments' => array('usc_mirc_export_collection_confirm_form', 2),
+    'file' => 'includes/export_confirmation.form.inc',
     'access callback' => 'usc_mirc_pbcore_export_access',
     'access arguments' => array(2),
     'type' => MENU_LOCAL_ACTION,
@@ -1475,6 +1476,18 @@ function usc_mirc_pbcore_export_access($obj) {
 }
 
 /**
+ * Implements hook_cron_queue_info().
+ *
+ * At the moment, there's only one queue.  It is used to export PBCORE records.
+ */
+function usc_mirc_cron_queue_info() {
+  $queues['usc_mirc_pbcore_export_queue'] = array(
+    'worker callback' => 'usc_mirc_pbcore_export_queue_operation',
+  );
+  return $queues;
+}
+
+/**
  * Implements hook_cron().
  *
  * Exports all pbcore records for preservation masters that have been updated
@@ -1482,6 +1495,8 @@ function usc_mirc_pbcore_export_access($obj) {
  * form for this module.
  */
 function usc_mirc_cron() {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+
   // Get the time of last export, defaulting to the beginning of the epoch if
   // this is the first export.  The time is formatted as a string that mulgara
   // can work with.
@@ -1497,15 +1512,16 @@ function usc_mirc_cron() {
             where $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
                   and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
                   and $time <mulgara:after> \'' . $last_export_time . '\'^^<xml-schema:dateTime> in <#xsd>';
-
   $tuque = islandora_get_tuque_connection();
   $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
 
-  // Get the output directory from the database.
+  // Get the output directory from the database and naively sanitize it.
   $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch');
   if (substr($output_dir, -1) != '/') {
     $output_dir .= '/';
   }
+
+  // Open a pointer to the logfile.
   $log_path = $output_dir . 'pbcore_export.log';
   $log_fp = fopen($log_path, 'a');
 
@@ -1513,22 +1529,22 @@ function usc_mirc_cron() {
     // Log the manifest header
     usc_mirc_log_pbcore_export_header($log_fp);
 
-    // Iterate over the result set and export each pbcore datastream to a file in
-    // the output directory.
     if (!empty($results)) {
+      $queue = DrupalQueue::get('usc_mirc_pbcore_export_queue');
+
+      // Add the results to the queue to be processed.
       foreach ($results as $result) {
-        $pid = $result['obj']['value'];
-        $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
-        usc_mirc_export_pbcore($pid, $output_path);
-        usc_mirc_log_pbcore_export_record($log_fp, $output_path);
+        $queue->createItem(array(
+          'pid' => $result['obj']['value'],
+          'output_dir' => $output_dir,
+        ));
       }
     }
     else {
+      // Finish the log manifest
       usc_mirc_log_pbcore_export_no_records($log_fp);
+      usc_mirc_log_pbcore_export_footer($log_fp);
     }
-
-    // Log the manifest footer.
-    usc_mirc_log_pbcore_export_footer($log_fp);
 
     // Get the current time (also formatted for mulgara).
     $now = usc_mirc_format_time(time());
@@ -1545,168 +1561,45 @@ function usc_mirc_cron() {
 }
 
 /**
- * Utility funciton to convert a seconds to a mulgara date string.
+ * Queue worker function for the PBCORE export.
  *
- * @param int $time
- *   Seconds since the last epoch
+ * Exports the PBCORE datastream for an object and writes an entry to the
+ * manifest.  If it is exporting the last item in the queue, it will also write
+ * the manifest footer.
  *
- * @return string
- *   Date string in a format mulgara finds acceptable.
+ * @param array $item
+ *   An item on the export queue.  Has two keys: pid and output_dir.
  */
-function usc_mirc_format_time($time) {
-  return date('Y-m-d\TH:i:s\Z', $time);
-}
+function usc_mirc_pbcore_export_queue_operation($item) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
 
-/**
- * Utility function to export pbcore for a preservation master.
- *
- * @param string $pid
- *   Pid for the preservation master.
- *
- * @param string $output_dir
- *   Output directory where exported pbcore xml will reside.
- */
-function usc_mirc_export_pbcore($pid, $output_path) {
-    $obj = islandora_object_load($pid);
-    $pbcore = $obj['PBCORE'];
-    $fp = fopen($output_path, 'w');
-    fwrite($fp, $pbcore->content);
-    fclose($fp);
-}
+  // Hack what we need out of the array.
+  $pid = $item['pid'];
+  $output_dir = $item['output_dir'];
 
-/**
- * Form funtion for confirming a pbcore export for a specific collection.
- *
- * @param arrray $form
- *   The form's renderable array.
- *
- * @param array $form_state
- *   Array of form state variables.
- *
- * @return array
- *   A drupal renderable array.  The $form variable, in this instance.
- */
-function usc_mirc_export_collection_confirm_form($form, &$form_state, $obj) {
-  // Basic confirm form
-  $form = confirm_form(
-    array(),
-    t(
-      "Are you sure you want to export PBCORE datastreams in @coll?",
-      array('@coll' => $obj->label)
-    ),
-    'islandora/object/' . $obj->id . '/manage'
-  );
-
-  // Stuff the collection into the form so we can pull it out and use it in the
-  // submit handler.
-  $form['obj'] = array(
-    '#type' => 'value',
-    '#value' => $obj,
-  );
-
-  return $form;
-}
-
-/**
- * Submit handler for the pbcore export confirmation form.
- *
- * Exports all pbcore docs from children of the supplied collection.
- * Does NOT set the last export time in the db.  Setting the time based on user
- * input for only a single collection will cause the next cron run try miss
- * other objects that may have been udated in different collections.
- *
- * @param arrray $form
- *   The form's renderable array.
- *
- * @param array $form_state
- *   Array of form state variables.
- */
-function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
-  // Hack the object out of storage.
-  $obj = $form_state['values']['obj'];
-
-  // Get the time of last export, defaulting to the beginning of the epoch if
-  // this is the first export.  The time is formatted as a string that mulgara
-  // can work with.
-  $last_export_time = variable_get("usc_mirc_last_pbcore_export", usc_mirc_format_time(0));
-
-  // Query for all preservation masters that have been updated since last
-  // export that are members of this collection.
-  $query = 'select $obj $time
-            from <#ri>
-            where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $obj->id . '>
-                  and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
-                  and $time <mulgara:after> \'' . $last_export_time . '\'^^<xml-schema:dateTime> in <#xsd>';
-
-  $tuque = islandora_get_tuque_connection();
-  $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
-
-  // Get the output directory from the database.
-  $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch');
-  if (substr($output_dir, -1) != '/') {
-    $output_dir .= '/';
-  }
+  // Open the log file.
   $log_path = $output_dir . 'pbcore_export.log';
   $log_fp = fopen($log_path, 'a');
 
   try {
-    // Log the manifest header
-    usc_mirc_log_pbcore_export_header($log_fp, $obj);
+    // Export the PBCORE record.
+    $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
+    usc_mirc_export_pbcore($pid, $output_path);
+    usc_mirc_log_pbcore_export_record($log_fp, $output_path);
 
-    // Iterate over the result set and export each pbcore datastream to a file in
-    // the output directory.
-    if (!empty($results)) {
-      foreach ($results as $result) {
-        $pid = $result['obj']['value'];
-        $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
-        usc_mirc_export_pbcore($pid, $output_path);
-        usc_mirc_log_pbcore_export_record($log_fp, $output_path);
-      }
-    }
-    else {
-      usc_mirc_log_pbcore_export_no_records($log_fp);
+    $queue = DrupalQueue::get('usc_mirc_pbcore_export_queue');
+
+    // If we're the last item to be processed for the queue, finish logging the
+    // export manifest.
+    if ($queue->numberOfItems() == 1) {
+      usc_mirc_log_pbcore_export_footer($log_fp);
     }
 
-    // Log the manifest footer.
-    usc_mirc_log_pbcore_export_footer($log_fp);
-
-    // Redirect back to the manage overlay.
-    $redirect = array('islandora/object/' . $obj->id . '/manage');
-    $form_state['redirect'] = $redirect;
-
+    // Close the log file.
     fclose($log_fp);
   }
   catch (Exception $e) {
     fclose($log_fp);
-    throw $e;
+    throw($e);
   }
-}
-
-function usc_mirc_log_pbcore_export_header($log_fp, $collection = NULL) {
-  fwrite($log_fp, "!!!\n");
-  $header_line = "Beginning PBCORE export";
-  if ($collection) {
-    $header_line .= " for " . $collection->label . "\n";
-  }
-  else {
-    $header_line .= "\n";
-  }
-  fwrite($log_fp, $header_line);
-  fwrite($log_fp, "Time: " . usc_mirc_format_time(time()) . "\n");
-  fwrite($log_fp, "!!!\n");
-  fwrite($log_fp, "\n");
-  fwrite($log_fp, "Export manifest:\n");
-}
-
-function usc_mirc_log_pbcore_export_record($log_fp, $output_path) {
-  fwrite($log_fp, "\t" . $output_path . "\n");
-}
-
-function usc_mirc_log_pbcore_export_no_records($log_fp) {
-  fwrite($log_fp, "\tNo records to export!\n");
-}
-
-function usc_mirc_log_pbcore_export_footer($log_fp) {
-  fwrite($log_fp, "Export successfully finished at " . usc_mirc_format_time(time()) . "\n");
-  fwrite($log_fp, "\n");
 }
