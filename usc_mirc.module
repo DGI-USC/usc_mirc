@@ -121,8 +121,8 @@ function usc_mirc_permission() {
       'title' => 'Administer the MIRC@SC custom module.',
     ),
     'access USC video export' => array(
-      'title' => 'Let users export MyVideo lists with paths in them.'
-    )
+      'title' => 'Let users export MyVideo lists with paths in them.',
+    ),
   );
 }
 
@@ -1048,7 +1048,7 @@ function usc_mirc_add_mezzanine_form_submit($form, &$form_state) {
   $form_state['redirect'] = "islandora/object/$object->id";
 
   if (!isset($object['PBCORE']) || !isset($object['DC'])) {
-    watchdog('usc_mirc', "The object $object->id is missing PBCore or DC!", array(), WATCHDOG_ERROR);
+    watchdog('usc_mirc', "The object @obj is missing PBCore or DC!", array('@obj' => $object->id), WATCHDOG_ERROR);
   }
 }
 
@@ -1136,7 +1136,7 @@ function usc_mirc_add_access_variant_form_submit($form, &$form_state) {
   usc_mirc_generate_video_metadata($form_state['local_path'], $object, $params);
 
   if (!isset($object['PBCORE']) || !isset($object['DC'])) {
-    watchdog('usc_mirc', "The object $object->id is missing PBCore or DC!", array(), WATCHDOG_ERROR);
+    watchdog('usc_mirc', "The object @obj is missing PBCore or DC!", array('@obj' => $object->id), WATCHDOG_ERROR);
   }
 }
 
@@ -1461,6 +1461,25 @@ function usc_mirc_export_objects_as_text($pids) {
   }
 }
 
+/**
+ * Implements hook_islandora_handle_get_xsl_files().
+ */
+function usc_mirc_islandora_handle_get_xsl_files() {
+  $transform_options = array();
+  $path = drupal_get_path('module', 'usc_mirc') . '/transforms/handle_the_PBCore.xsl';
+  $transform_options[$path] = 'handle_the_PBCore.xsl';
+  return $transform_options;
+}
+
+/**
+ * Determines whether or not to show the pbcore export link for a collection.
+ *
+ * @param AbstractObject $obj
+ *   The collection to show the link for.
+ *
+ * @return bool
+ *   Whether or not to show the link.
+ */
 function usc_mirc_pbcore_export_access($obj) {
   if (in_array('usc:collectionCModel', $obj->models)) {
     if (user_access('administer usc_mirc')) {
