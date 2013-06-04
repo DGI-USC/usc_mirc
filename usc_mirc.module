@@ -1256,6 +1256,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_solr_object_result_alter(&$objec
 function usc_mirc_usc_vrocmodel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
   $docs = array();
   $fields = array(
+    'pb_title_Main_ms',
     'pb_title_Item_ms',
     'pb_description_summary_ms',
     'pb_coverage_Temporal_ms',
