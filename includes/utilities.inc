@@ -753,15 +753,15 @@ function usc_mirc_format_time($time) {
  * @param string $pid
  *   Pid for the preservation master.
  *
- * @param string $output_dir
+ * @param string $output_path
  *   Output directory where exported pbcore xml will reside.
  */
 function usc_mirc_export_pbcore($pid, $output_path) {
-    $obj = islandora_object_load($pid);
-    $pbcore = $obj['PBCORE'];
-    $fp = fopen($output_path, 'w');
-    fwrite($fp, $pbcore->content);
-    fclose($fp);
+  $obj = islandora_object_load($pid);
+  $pbcore = $obj['PBCORE'];
+  $fp = fopen($output_path, 'w');
+  fwrite($fp, $pbcore->content);
+  fclose($fp);
 }
 
 /**
@@ -805,8 +805,7 @@ function usc_mirc_log_pbcore_export_record($log_fp, $output_path) {
 }
 
 /**
- * Utility function to write a PBCORE export manifest entry to a log file when
- * there are no records to export.
+ * Utility function to write a manifest entry when there are no records.
  *
  * @param resource $log_fp
  *   File pointer resource for the log file.

@@ -18,7 +18,7 @@
  *   A drupal renderable array.  The $form variable, in this instance.
  */
 function usc_mirc_export_collection_confirm_form($form, &$form_state, $obj) {
-  // Basic confirm form
+  // Basic confirm form.
   $form = confirm_form(
     array(),
     t(
@@ -195,7 +195,8 @@ function usc_mirc_pbcore_export_batch_operation($pid, $output_dir, $coll, &$cont
  *
  * @param array $results
  *   Array containing values that are set during the batch operation function.
- *   Is used to grab the collection and log path for the final message in the export manifest log.
+ *   Is used to grab the collection and log path for the final message in the
+ *   export manifest log.
  *
  * @param array $operations
  *   Array of unprocessed operations if there was an error.
@@ -223,4 +224,3 @@ function usc_mirc_pbcore_export_batch_finished($success, $results, $operations) 
     throw($e);
   }
 }
-

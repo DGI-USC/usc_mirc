@@ -1545,7 +1545,7 @@ function usc_mirc_cron() {
   $log_fp = fopen($log_path, 'a');
 
   try {
-    // Log the manifest header
+    // Log the manifest header.
     usc_mirc_log_pbcore_export_header($log_fp);
 
     if (!empty($results)) {
@@ -1560,7 +1560,7 @@ function usc_mirc_cron() {
       }
     }
     else {
-      // Finish the log manifest
+      // Finish the log manifest.
       usc_mirc_log_pbcore_export_no_records($log_fp);
       usc_mirc_log_pbcore_export_footer($log_fp);
     }
