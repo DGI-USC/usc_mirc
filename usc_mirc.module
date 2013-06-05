@@ -1503,17 +1503,7 @@ function usc_mirc_islandora_handle_get_xsl_files() {
  *   Whether or not to show the link.
  */
 function usc_mirc_pbcore_export_access($obj) {
-  if (in_array('usc:collectionCModel', $obj->models)) {
-    if (user_access('administer usc_mirc')) {
-      return TRUE;
-    }
-    else {
-      return FALSE;
-    }
-  }
-  else {
-    return FALSE;
-  }
+  return in_array('usc:collectionCModel', $obj->models) && user_access('administer usc_mirc');
 }
 
 /**
