@@ -1265,6 +1265,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_solr_object_result_alter(&$objec
 function usc_mirc_usc_vrocmodel_islandora_solr_object_result_alter(&$object_index, $query_processor) {
   $docs = array();
   $fields = array(
+    'pb_title_Main_ms',
     'pb_title_Item_ms',
     'pb_description_summary_ms',
     'pb_coverage_Temporal_ms',
@@ -1397,6 +1398,27 @@ function usc_mirc_islandora_bookmark_export_handler() {
     $usc_mirc = array();
     $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
     return $usc_mirc;
+  }
+}
+
+/**
+ * Implements hook_block_view_MODULE_DELTA_alter().
+ *
+ * Removes the block altogether if the object being viewed is a collection.
+ */
+function usc_mirc_block_view_islandora_bookmark_islandora_bookmark_alter(&$data, $block) {
+  if (isset($data['pid'])) {
+    $pid = $data['pid'];
+    $obj = islandora_object_load($pid);
+    if ($obj) {
+      $models_to_hide = array(
+        'usc:collectionCModel',
+        'islandora:collectionCModel',
+      );
+      if (array_intersect($models_to_hide, $obj->models)) {
+        $data['content'] = '';
+      }
+    }
   }
 }
 
