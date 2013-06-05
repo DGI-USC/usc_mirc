@@ -759,9 +759,7 @@ function usc_mirc_format_time($time) {
 function usc_mirc_export_pbcore($pid, $output_path) {
   $obj = islandora_object_load($pid);
   $pbcore = $obj['PBCORE'];
-  $fp = fopen($output_path, 'w');
-  fwrite($fp, $pbcore->content);
-  fclose($fp);
+  $pbcore->getContent($output_path);
 }
 
 /**

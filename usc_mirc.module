@@ -1530,7 +1530,8 @@ function usc_mirc_cron() {
             from <#ri>
             where $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
                   and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
-                  and $time <mulgara:after> \'' . $last_export_time . '\'^^<xml-schema:dateTime> in <#xsd>';
+                  and $time <mulgara:after> \'' . $last_export_time . '\'^^<xml-schema:dateTime> in <#xsd>
+            order by $time';
   $tuque = islandora_get_tuque_connection();
   $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
 
@@ -1555,6 +1556,7 @@ function usc_mirc_cron() {
       foreach ($results as $result) {
         $queue->createItem(array(
           'pid' => $result['obj']['value'],
+          'time' => $result['time']['value'],
           'output_dir' => $output_dir,
         ));
       }
@@ -1564,12 +1566,6 @@ function usc_mirc_cron() {
       usc_mirc_log_pbcore_export_no_records($log_fp);
       usc_mirc_log_pbcore_export_footer($log_fp);
     }
-
-    // Get the current time (also formatted for mulgara).
-    $now = usc_mirc_format_time(time());
-
-    // Set it as the last export time in the db.
-    variable_set('usc_mirc_last_pbcore_export', $now);
 
     fclose($log_fp);
   }
@@ -1587,7 +1583,7 @@ function usc_mirc_cron() {
  * the manifest footer.
  *
  * @param array $item
- *   An item on the export queue.  Has two keys: pid and output_dir.
+ *   An item on the export queue.  Has three keys: pid, time,  and output_dir.
  */
 function usc_mirc_pbcore_export_queue_operation($item) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
@@ -1605,6 +1601,10 @@ function usc_mirc_pbcore_export_queue_operation($item) {
     $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
     usc_mirc_export_pbcore($pid, $output_path);
     usc_mirc_log_pbcore_export_record($log_fp, $output_path);
+
+    // Set the last export time based on the object just in case things go
+    // sour.
+    variable_set('usc_mirc_last_pbcore_export', $item['time']);
 
     $queue = DrupalQueue::get('usc_mirc_pbcore_export_queue');
 

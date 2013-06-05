@@ -58,24 +58,27 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
   // Hack the object out of storage.
   $obj = $form_state['values']['obj'];
 
-  // Get the time of last export, defaulting to the beginning of the epoch if
-  // this is the first export.  The time is formatted as a string that mulgara
-  // can work with.
-  $last_export_time = variable_get("usc_mirc_last_pbcore_export", usc_mirc_format_time(0));
+  // Get the cmodel from preservation master records.
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
 
-  // Query for all preservation masters that have been updated since last
-  // export that are members of this collection.
-  $query = 'select $obj $time
+  // Query for all preservation masters that are members of this collection.
+  $query = 'select count(
+              select $obj
+              from <#ri>
+              where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $obj->id . '>
+                    and $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>)
             from <#ri>
             where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $obj->id . '>
-                  and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
-                  and $time <mulgara:after> \'' . $last_export_time . '\'^^<xml-schema:dateTime> in <#xsd>';
+                  and $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>';
   $tuque = islandora_get_tuque_connection();
   $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
+  if (isset($results[0]['k0']['value'])) {
+    $total = $results[0]['k0']['value'];
+  }
 
   // Process the export as a batch if there's records to export.  Otherwise
   // just redirect back with a message.
-  if (!empty($results)) {
+  if (isset($total) && $total) {
     // Get the output directory from the database and naively sanitize it.
     $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch');
     if (substr($output_dir, -1) != '/') {
@@ -94,24 +97,22 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
       $batch = array(
         'title' => t("Exporting PBCORE records."),
         'init_message' => t("The export is beginning."),
-        'progress_message' => t('Exported @current out of @total.'),
         'error_message' => t("There was an error exporting the PBCORE records."),
-        'operations' => array(),
+        'operations' => array(
+          array(
+            'usc_mirc_pbcore_export_batch_operation',
+            array(
+              $output_dir,
+              $obj,
+              1,
+              0,
+              $total,
+            ),
+          ),
+        ),
         'finished' => 'usc_mirc_pbcore_export_batch_finished',
         'file' => drupal_get_path('module', 'usc_mirc') . '/includes/export_confirmation.form.inc',
       );
-
-      // Add the batch operations.
-      foreach ($results as $result) {
-        $batch['operations'][] = array(
-          'usc_mirc_pbcore_export_batch_operation',
-          array(
-            $result['obj']['value'],
-            $output_dir,
-            $obj,
-          ),
-        );
-      }
 
       // Start the batch.
       batch_set($batch);
@@ -128,7 +129,7 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
     // Redirect back to the manage overlay.
     $redirect = array('islandora/object/' . $obj->id . '/manage');
     $form_state['redirect'] = $redirect;
-    drupal_set_message(check_plain("No PBCORE records in {$obj->id} have been updated since the last export on $last_export_time"));
+    drupal_set_message(check_plain("There are no preservation masters in {$obj->id} to export!"));
   }
 }
 
@@ -152,35 +153,70 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
  * @param array $context
  *   The context array for the current batch being processed.
  */
-function usc_mirc_pbcore_export_batch_operation($pid, $output_dir, $coll, &$context) {
+function usc_mirc_pbcore_export_batch_operation($output_dir, $coll, $limit, $offset, $total, &$context) {
+
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
 
-  dd("PROCESSING BATCH OPERATION");
-
-  // Open the log file.
-  $log_path = $output_dir . 'pbcore_export.log';
-  $log_fp = fopen($log_path, 'a');
-
-  try {
-    // Export the PBCORE record.
-    $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
-    usc_mirc_export_pbcore($pid, $output_path);
-    usc_mirc_log_pbcore_export_record($log_fp, $output_path);
-
-    // Set some vars in the context to hack out later in the finished handler.
-    if (!isset($context['results']['log_path'])) {
-      $context['results']['log_path'] = $log_path;
-    }
-    if (!isset($context['results']['coll']) && $coll) {
-      $context['results']['coll'] = $coll;
-    }
-
-    // Close the log file.
-    fclose($log_fp);
+  // Grab the offset out of the context if it exists.
+  if (isset($context['sandbox']['offset'])) {
+    $offset = $context['sandbox']['offset'];
   }
-  catch (Exception $e) {
-    fclose($log_fp);
-    throw($e);
+
+  // Set the number of processed items to zero if we're just beginning.
+  if (!isset($context['sandbox']['processed'])) {
+    $context['sandbox']['processed'] = 0;
+  }
+
+  // Get the cmodel from preservation master records.
+  $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
+
+  // Query for all preservation masters that are members of this collection.
+  $query = 'select $obj $time
+            from <#ri>
+            where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $coll->id . '>
+                  and $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
+                  and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
+            order by $time
+            limit ' . $limit . '
+            offset ' . $offset;
+  $tuque = islandora_get_tuque_connection();
+  $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
+
+  if (!empty($results)) {
+    // Open the log file.
+    $log_path = $output_dir . 'pbcore_export.log';
+    $log_fp = fopen($log_path, 'a');
+
+    try {
+      // Export each PBCORE record.
+      foreach ($results as $result) {
+        $pid = $result['obj']['value'];
+        $time = $result['time']['value'];
+        $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
+        usc_mirc_export_pbcore($pid, $output_path);
+        usc_mirc_log_pbcore_export_record($log_fp, $output_path);
+        $context['sandbox']['processed']++;
+      }
+
+      // Set some vars in the context to use next iteration, or to hack out
+      // later in the finished handler.
+      $context['results']['log_path'] = $log_path;
+      $context['results']['coll'] = $coll;
+      $context['sandbox']['offset'] = $offset + $limit;
+
+      // Let the batch know it's not finished yet.
+      $context['finished'] = ($context['sandbox']['progress'] >= $total) ? 1 : $context['sandbox']['progress'] >= $total;
+
+      // Update the mesage for appropriate user feedback.
+      $context['message'] = t('SETTING MESSAGE Exported @proc out of @tot', array('@proc' => $context['sandbox']['processed'], '@tot' => $total));
+
+      // Close the log file.
+      fclose($log_fp);
+    }
+    catch (Exception $e) {
+      fclose($log_fp);
+      throw($e);
+    }
   }
 }
 
