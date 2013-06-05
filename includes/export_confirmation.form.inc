@@ -97,14 +97,15 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
       $batch = array(
         'title' => t("Exporting PBCORE records."),
         'init_message' => t("The export is beginning."),
-        'error_message' => t("There was an error exporting the PBCORE records."),
+        'progress_message' => t("Exporting PBCORE's"),
+        'error_message' => t("There was an error exporting the PBCORE's"),
         'operations' => array(
           array(
             'usc_mirc_pbcore_export_batch_operation',
             array(
               $output_dir,
               $obj,
-              1,
+              100,
               0,
               $total,
             ),
@@ -205,10 +206,12 @@ function usc_mirc_pbcore_export_batch_operation($output_dir, $coll, $limit, $off
       $context['sandbox']['offset'] = $offset + $limit;
 
       // Let the batch know it's not finished yet.
-      $context['finished'] = ($context['sandbox']['progress'] >= $total) ? 1 : $context['sandbox']['progress'] >= $total;
+      $context['finished'] = ($context['sandbox']['progress'] >= $total) ? 1 : $context['sandbox']['progress'] / $total;
 
       // Update the mesage for appropriate user feedback.
-      $context['message'] = t('SETTING MESSAGE Exported @proc out of @tot', array('@proc' => $context['sandbox']['processed'], '@tot' => $total));
+      $context['message'] = t('Exported @proc out of @tot', array('@proc' => $context['sandbox']['processed'], '@tot' => $total));
+
+      $_SESSION['http_request_count']++;
 
       // Close the log file.
       fclose($log_fp);
