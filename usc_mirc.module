@@ -771,14 +771,9 @@ function usc_mirc_mezzanine_linked_tab($object) {
  *   Preservation masters form.
  */
 function usc_mirc_preservation_linked_tab(FedoraObject $object) {
-  global $user;
   $form = array();
-
   $relationships = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
   $subcollection = $relationships[0]['object']['value'];
-  $subject = "?subject fre:isMemberOfCollection <info:fedora/$subcollection>";
-  $pres_masters = usc_mirc_get_derivatives($object, $subject);
-  $form['preservation_masters'] = usc_mirc_build_child_links($object, 'Preservation Masters', $pres_masters);
   $mezzanines = usc_mirc_get_derivatives($object);
   $form['mezzanines'] = usc_mirc_build_child_links($object, 'Mezzanines', $mezzanines);
   $access_query = "PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
