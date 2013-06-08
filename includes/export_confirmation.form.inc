@@ -80,7 +80,7 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
   // just redirect back with a message.
   if (isset($total) && $total) {
     // Get the output directory from the database and naively sanitize it.
-    $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch');
+    $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mirc/mezz/PBCore_Watch');
     if (substr($output_dir, -1) != '/') {
       $output_dir .= '/';
     }
@@ -184,7 +184,7 @@ function usc_mirc_pbcore_export_batch_operation($output_dir, $coll, $limit, $off
             from <#ri>
             where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $coll->id . '>
                   and $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
-                  and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
+                  and $obj <fedora-view:lastModifiedDate> $time
             order by $time
             limit ' . $limit . '
             offset ' . $offset;
