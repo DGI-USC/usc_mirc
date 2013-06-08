@@ -107,7 +107,7 @@ function usc_mirc_cron_pbcore_export_batch_operation($output_dir, $limit, &$cont
   $query = 'select $obj $time
             from <#ri>
             where $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
-                  and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
+                  and $obj <fedora-view:lastModifiedDate> $time
                   and $time <mulgara:after> \'' . $last_export_time . '\'^^<xml-schema:dateTime> in <#xsd>
             order by $time
             limit ' . $limit;
