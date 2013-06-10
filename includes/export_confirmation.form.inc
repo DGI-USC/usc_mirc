@@ -140,17 +140,19 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
  * Exports the pbcore for the object with the supplied pid and writes the
  * appropriate entry in the export manifest log.
  *
- * @param string $pid
- *   Pid of the object whose PBCORE datastream we wish to export.
- *
  * @param string $output_dir
  *   Output directory where exported pbcore xml will reside.
- *
  * @param AbstractObject $coll
  *   Collection in Fedora whose children we're exporting.  Defaults to NULL
  *   (for the actual cron job), but is used for descriptive logging when a
  *   user initiates the export.
- *
+ * @param int $limit
+ *   The number of objects to export in a single iteration.
+ * @param int $offset
+ *   The number of objects to skip from the beginning (ordered by date), to
+ *   allow for the "paging" behaviour.
+ * @param int $total
+ *   The total number of objects which need to be processed.
  * @param array $context
  *   The context array for the current batch being processed.
  */
