@@ -31,7 +31,11 @@ function usc_mirc_traverse_directory($url_base, $filesystem_base, $string, $sub_
   }
 
   if (is_dir($dir_name)) {
+    // XXX: dir() is detected as being an alias to a function which doesn't
+    // exist...
+    // @codingStandardsIgnoreStart
     $dir = dir($dir_name);
+    // @codingStandardsIgnoreEnd
     while ($entry = $dir->read()) {
       if (in_array($entry, array('.', '..'))) {
         continue;
