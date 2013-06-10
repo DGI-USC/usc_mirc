@@ -733,3 +733,92 @@ function usc_mirc_retrieve_pbcore_fields($object) {
     return FALSE;
   }
 }
+
+/**
+ * Utility funciton to convert a seconds to a mulgara date string.
+ *
+ * @param int $time
+ *   Seconds since the last epoch
+ *
+ * @return string
+ *   Date string in a format mulgara finds acceptable.
+ */
+function usc_mirc_format_time($time) {
+  return date('Y-m-d\TH:i:s\Z', $time);
+}
+
+/**
+ * Utility function to export pbcore for a preservation master.
+ *
+ * @param string $pid
+ *   Pid for the preservation master.
+ *
+ * @param string $output_path
+ *   Output directory where exported pbcore xml will reside.
+ */
+function usc_mirc_export_pbcore($pid, $output_path) {
+  $obj = islandora_object_load($pid);
+  $pbcore = $obj['PBCORE'];
+  $pbcore->getContent($output_path);
+}
+
+/**
+ * Utility function to write the PBCORE export manifest header to a log file.
+ *
+ * @param resource $log_fp
+ *   File pointer resource for the log file.
+ *
+ * @param AbstractObject $collection
+ *   Collection in Fedora whose children we're exporting.  Defaults to NULL
+ *   (for the actual cron job), but is used for descriptive logging when a
+ *   user initiates the export.
+ */
+function usc_mirc_log_pbcore_export_header($log_fp, $collection = NULL) {
+  fwrite($log_fp, "!!!\n");
+  $header_line = "Beginning PBCORE export";
+  if ($collection) {
+    $header_line .= " for " . $collection->label . "\n";
+  }
+  else {
+    $header_line .= "\n";
+  }
+  fwrite($log_fp, $header_line);
+  fwrite($log_fp, "Time: " . usc_mirc_format_time(time()) . "\n");
+  fwrite($log_fp, "!!!\n");
+  fwrite($log_fp, "\n");
+  fwrite($log_fp, "Export manifest:\n");
+}
+
+/**
+ * Utility function to write a PBCORE export manifest entry to a log file.
+ *
+ * @param resource $log_fp
+ *   File pointer resource for the log file.
+ *
+ * @param string $output_path
+ *   The output path of the exported PBCORE datastream.
+ */
+function usc_mirc_log_pbcore_export_record($log_fp, $output_path) {
+  fwrite($log_fp, "\t" . $output_path . "\n");
+}
+
+/**
+ * Utility function to write a manifest entry when there are no records.
+ *
+ * @param resource $log_fp
+ *   File pointer resource for the log file.
+ */
+function usc_mirc_log_pbcore_export_no_records($log_fp) {
+  fwrite($log_fp, "\tNo records to export!\n");
+}
+
+/**
+ * Utility function to write a PBCORE export manifest footer to a log file.
+ *
+ * @param resource $log_fp
+ *   File pointer resource for the log file.
+ */
+function usc_mirc_log_pbcore_export_footer($log_fp) {
+  fwrite($log_fp, "Export successfully finished at " . usc_mirc_format_time(time()) . "\n");
+  fwrite($log_fp, "\n");
+}

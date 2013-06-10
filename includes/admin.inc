@@ -42,6 +42,12 @@ function usc_mirc_admin_settings($form, &$form_state) {
       '#default_value' => variable_get('usc_mirc_solr_imagecache_thumbnail_preset', 'usc_mirc_solr_imagecache_thumbnail_preset'),
       '#options' => $image_styles,
     ),
+    'usc_mirc_pbcore_export_dir' => array(
+      '#type' => 'textfield',
+      '#title' => t('PBCORE export directory'),
+      '#description' => t("Directory where PBCORE xml's will reside after a user/cron initiated export."),
+      '#default_value' => variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch'),
+    ),
     'autocomplete' => array(
       '#type' => 'fieldset',
       '#title' => t('Autocompletion'),
