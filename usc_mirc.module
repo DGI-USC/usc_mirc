@@ -509,9 +509,9 @@ function usc_mirc_islandora_xml_form_builder_form_associations() {
 }
 
 /**
- * Implements hook_islandora_xml_form_builder_get_transforms().
+ * Implements hook_xml_form_builder_get_transforms().
  */
-function usc_mirc_islandora_xml_form_builder_get_transforms() {
+function usc_mirc_xml_form_builder_get_transforms() {
   return array(
     'pbcore_to_dc.xslt' => drupal_get_path('module', 'usc_mirc') . '/transforms/pbcore_to_dc.xslt',
   );
