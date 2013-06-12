@@ -494,7 +494,7 @@ function usc_mirc_islandora_xml_form_builder_form_associations() {
       'form_name' => 'PBCore Update Preservation Master Location',
       'dsid' => 'PBCORE',
       'title_field' => array('main_title'),
-      'transform' => 'pbcore_to_dc.xsl',
+      'transform' => 'pbcore_to_dc.xslt',
       'template' => FALSE,
     ),
     'usc_pbcore_preservation_description' => array(
@@ -502,7 +502,7 @@ function usc_mirc_islandora_xml_form_builder_form_associations() {
       'form_name' => 'PBCore Description Document',
       'dsid' => 'PBCORE',
       'title_field' => array('titles', 'main_title'),
-      'transform' => 'pbcore_to_dc.xsl',
+      'transform' => 'pbcore_to_dc.xslt',
       'template' => FALSE,
     ),
   );
