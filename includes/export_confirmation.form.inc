@@ -61,7 +61,7 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
   // Get the cmodel from preservation master records.
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
 
-  // Query for all preservation masters that are members of this collection.
+  // Query to count preservation masters that are members of this collection.
   $query = 'select count(
               select $obj
               from <#ri>
@@ -80,7 +80,7 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
   // just redirect back with a message.
   if (isset($total) && $total) {
     // Get the output directory from the database and naively sanitize it.
-    $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch');
+    $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mirc/mezz/PBCore_Watch');
     if (substr($output_dir, -1) != '/') {
       $output_dir .= '/';
     }
@@ -135,24 +135,30 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
 }
 
 /**
- * The export operation for a single record in the batch.
+ * The export operation for a single iteration of the batch.
  *
- * Exports the pbcore for the object with the supplied pid and writes the
- * appropriate entry in the export manifest log.
+ * Exports the pbcores for preservation master children of the supplied
+ * collection.
  *
  * @param string $output_dir
  *   Output directory where exported pbcore xml will reside.
+ *
  * @param AbstractObject $coll
  *   Collection in Fedora whose children we're exporting.  Defaults to NULL
  *   (for the actual cron job), but is used for descriptive logging when a
  *   user initiates the export.
+ *
  * @param int $limit
- *   The number of objects to export in a single iteration.
+ *   The number of pbcores to process in this iteration.
+ *
  * @param int $offset
- *   The number of objects to skip from the beginning (ordered by date), to
- *   allow for the "paging" behaviour.
+ *   Offset for the ITQL query to select the correct children.  We need this
+ *   since we can't rely on setting the last export time as we go (as in the
+ *   cron initiated batch).
+ *
  * @param int $total
- *   The total number of objects which need to be processed.
+ *   Total number of pbcores to export.  Used to set the batch's progress bar.
+ *
  * @param array $context
  *   The context array for the current batch being processed.
  */
@@ -178,7 +184,7 @@ function usc_mirc_pbcore_export_batch_operation($output_dir, $coll, $limit, $off
             from <#ri>
             where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $coll->id . '>
                   and $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
-                  and $obj <info:fedora/fedora-system:def/view#lastModifiedDate> $time
+                  and $obj <fedora-view:lastModifiedDate> $time
             order by $time
             limit ' . $limit . '
             offset ' . $offset;

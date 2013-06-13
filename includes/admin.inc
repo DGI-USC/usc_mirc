@@ -45,7 +45,7 @@ function usc_mirc_admin_settings($form, &$form_state) {
     'usc_mirc_pbcore_export_dir' => array(
       '#type' => 'textfield',
       '#title' => t('PBCORE export directory'),
-      '#description' => t("Directory where PBCORE xml's will reside after a user/cron initiated export."),
+      '#description' => t("Directory where PBCORE xml's will reside after a user/cron initiated export.  Please ensure the apache user has access to this directory."),
       '#default_value' => variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch'),
     ),
     'autocomplete' => array(
