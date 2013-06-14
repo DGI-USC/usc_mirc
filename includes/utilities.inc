@@ -23,6 +23,7 @@
  *   Markup for the generated image.
  */
 function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_preset = NULL) {
+  module_load_include('inc', 'islandora', 'includes/authtokens');
   $object = islandora_object_load($pid);
   $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
 
