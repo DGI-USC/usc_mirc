@@ -23,6 +23,7 @@
  *   Markup for the generated image.
  */
 function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_preset = NULL) {
+  module_load_include('inc', 'islandora', 'includes/authtokens');
   $object = islandora_object_load($pid);
   $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
 
@@ -33,7 +34,11 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
   else {
     $dsid = 'TN';
   }
-  $image = "islandora/object/$pid/datastream/$dsid/view";
+  $token = islandora_get_object_token($object->id, $dsid, '2');
+  $image = url("islandora/object/$pid/datastream/$dsid/view", array(
+    'absolute' => TRUE,
+    'query' => array('token' => $token),
+  ));
 
   if (module_exists('imagecache_external') && is_callable('theme_imagecache_external')) {
     return theme('imagecache_external', array(
