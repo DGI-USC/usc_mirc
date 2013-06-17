@@ -25,7 +25,8 @@ function usc_mirc_export_collection_confirm_form($form, &$form_state, $obj) {
       "Are you sure you want to export PBCORE datastreams in @coll?",
       array('@coll' => $obj->label)
     ),
-    'islandora/object/' . $obj->id . '/manage'
+    'islandora/object/' . $obj->id . '/manage',
+    t('Records will be exported to @dir', array('@dir' => variable_get('usc_mirc_pbcore_export_dir', '/mnt/mirc/mezz/PBCore_Watch')))
   );
 
   // Stuff the collection into the form so we can pull it out and use it in the
