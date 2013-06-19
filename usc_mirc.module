@@ -563,7 +563,7 @@ function usc_mirc_usc_collectioncmodel_islandora_view_object($object) {
   $form = array(
     'collection_metadata' => array(
       '#type' => 'fieldset',
-      '#title' => t('Collection Metadata'),
+      '#title' => '',
       '#collapsible' => FALSE,
       '#collapsed' => TRUE,
       'usc-collection-image' => array(
@@ -602,7 +602,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
   $output['mezzanine_display'] = array(
     'player' => array(
       '#type' => 'fieldset',
-      '#title' => t('Player'),
+      '#title' => '',
       '#attributes' => array(
         'class' => array('usc-mirc-fieldset-vid'),
       ),
@@ -610,7 +610,7 @@ function usc_mirc_usc_mezzaninecmodel_islandora_view_object($object) {
     ),
     'short_metadata' => array(
       '#type' => 'fieldset',
-      '#title' => t('Basic Metadata'),
+      '#title' => '',
       '#attributes' => array(
         'class' => array('usc-mirc-fieldset-metadata'),
       ),
