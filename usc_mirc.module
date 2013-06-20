@@ -82,34 +82,6 @@ function usc_mirc_menu() {
 }
 
 /**
- * Implements hook_menu_alter().
- */
-function usc_mirc_menu_alter(&$items) {
-  // Move the manage tab to be the last tab.
-  $items['islandora/object/%islandora_object/manage']['weight'] = 10;
-  $items['islandora/object/%islandora_object/manage/collection']['access callback'] = 'usc_mirc_collection_tab_access';
-}
-
-/**
- * Determine whether or not to show this modules manage tab.
- *
- * @param FedoraObject $object
- *   The object being managed.
- *
- * @return bool
- *   TRUE if it should be shown, and FALSE if it should not be shown.
- */
-function usc_mirc_collection_tab_access($object = NULL) {
-  if (!is_object($object) || !in_array('islandora:collectionCModel', $object->models) || !$object['COLLECTION_POLICY']) {
-    return FALSE;
-  }
-  return islandora_basic_collection_ingest_child_collection_access($object) ||
-    user_access(MANAGE_COLLECTION_POLICY) ||
-    user_access(MIGRATE_COLLECTION_MEMBERS) ||
-    islandora_basic_collection_ingest_access($object);
-}
-
-/**
  * Implements hook_permission().
  */
 function usc_mirc_permission() {
