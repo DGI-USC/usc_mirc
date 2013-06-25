@@ -1412,9 +1412,10 @@ function usc_mirc_export_objects_as_text($pids) {
               preg_match('/\/(.*)/', $potential_path, $path_match);
               if (!empty($path_match)) {
                 $path = $path_match[0];
-                // USC had a change requested detailed in ONTIME-1853 to change the
-                // path of what we grab from PBCORE from /mnt/mirc/mezz/mezzanine/file
-                // to /Volumes/mircarch/archival/file. We'll do this here.
+                // USC had a change requested detailed in ONTIME-1853 to change
+                // the path of what we grab from PBCORE from
+                // /mnt/mirc/mezz/mezzanine/file to
+                // /Volumes/mircarch/archival/file. We'll do this here.
                 $path = str_replace('/mnt/mirc/arch', '/Volumes/mircarch', $path);
                 break;
               }
@@ -1426,9 +1427,9 @@ function usc_mirc_export_objects_as_text($pids) {
           if (!empty($pb_results)) {
             $path = (string) $pb_results[0];
             // USC had a change requested detailed in ONTIME-1853 to change the
-            // path of what we grab from PBCORE from /mnt/mirc/mezz/mezzanine/file
-            // to /Volumes/mircmezz/mezzanine/file and
-            // /Volumes/mircmezz/access/file. We'll do this here.
+            // path of what we grab from PBCORE from
+            // /mnt/mirc/mezz/mezzanine/file to /Volumes/mircmezz/mezzanine/file
+            // and Volumes/mircmezz/access/file. We'll do this here.
             $path = str_replace('/mnt/mirc/mezz', '/Volumes/mircmezz', $path);
           }
         }
