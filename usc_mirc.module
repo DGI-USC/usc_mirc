@@ -696,13 +696,12 @@ function usc_mirc_mezzanine_linked_tab($object) {
   PREFIX is: <http://islandora.ca/ontology/relsext#>
   SELECT ?pres ?label
   WHERE {
-    ?mez fre:isDerivativeOf ?pres .
+    <info:fedora/$object->id> fre:isDerivativeOf ?pres .
     ?pres fm:label ?label
     OPTIONAL {
       ?pres is:isViewableByUser ?usr .
       ?pres is:isViewableByRole ?role .
-    }
-    FILTER(sameTerm(?mez, <info:fedora/$object->id>))";
+    }";
   $query .= usc_mirc_append_xacml_filter();
   $pres_result = $object->repository->ri->query($query, 'sparql');
 
@@ -765,8 +764,8 @@ function usc_mirc_preservation_linked_tab(FedoraObject $object) {
         WHERE {
     {
       ?sub fm:hasModel <info:fedora/usc:collectionCModel> {
-      ?pre fre:isMemberOfCollection ?sub .
-            ?mezz fre:isDerivativeOf ?pre .
+      ?pre fre:isMemberOfCollection <info:fedora/$subcollection> .
+            ?mezz fre:isDerivativeOf <info:fedora/$object->id> .
             ?subject fre:isDerivativeOf ?mezz ;
                fm:label ?label ;
                fm:state fm:Active
@@ -775,10 +774,8 @@ function usc_mirc_preservation_linked_tab(FedoraObject $object) {
     OPTIONAL {
       ?subject is:isViewableByUser ?usr .
       ?subject is:isViewableByRole ?role .
-    }
-    FILTER(sameTerm(?sub, <info:fedora/$subcollection>))";
+    }";
   $access_query .= usc_mirc_append_xacml_filter();
-
   $access_variants = $object->repository->ri->query($access_query, 'sparql');
   $form['access_variants'] = usc_mirc_build_child_links($object, 'Access Variants', $access_variants);
   $breadcrumb = array();
@@ -1399,6 +1396,7 @@ function usc_mirc_export_objects_as_text($pids) {
   $path_export = array();
   $mezz_cmodel = variable_get('usc_mirc_cmodel_mezzanine', 'usc:mezzanineCModel');
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
+  $access_cmodel = variable_get('usc_mirc_cmodel_access', 'usc:accessCModel');
   foreach ($pids as $pid) {
     $object = islandora_object_load($pid);
     if ($object) {
@@ -1414,15 +1412,25 @@ function usc_mirc_export_objects_as_text($pids) {
               preg_match('/\/(.*)/', $potential_path, $path_match);
               if (!empty($path_match)) {
                 $path = $path_match[0];
+                // USC had a change requested detailed in ONTIME-1853 to change
+                // the path of what we grab from PBCORE from
+                // /mnt/mirc/mezz/mezzanine/file to
+                // /Volumes/mircarch/archival/file. We'll do this here.
+                $path = str_replace('/mnt/mirc/arch', '/Volumes/mircarch', $path);
                 break;
               }
             }
           }
         }
-        elseif (in_array($mezz_cmodel, $object->models)) {
+        elseif (array_intersect(array($mezz_cmodel, $access_cmodel), $object->models)) {
           $pb_results = $pb_xml->xpath('pb:instantiationIdentifier/text()');
           if (!empty($pb_results)) {
             $path = (string) $pb_results[0];
+            // USC had a change requested detailed in ONTIME-1853 to change the
+            // path of what we grab from PBCORE from
+            // /mnt/mirc/mezz/mezzanine/file to /Volumes/mircmezz/mezzanine/file
+            // and Volumes/mircmezz/access/file. We'll do this here.
+            $path = str_replace('/mnt/mirc/mezz', '/Volumes/mircmezz', $path);
           }
         }
         if ($path) {
