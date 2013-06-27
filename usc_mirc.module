@@ -114,7 +114,7 @@ function usc_mirc_ingest_access(FedoraObject $object) {
     'usc:vroCModel',
   );
 
-  if (user_access('administer usc_mirc')) {
+  if (islandora_object_access(FEDORA_ADD_DS, $object)) {
     if (array_intersect($usc_models, $object->models)) {
       return TRUE;
     }
