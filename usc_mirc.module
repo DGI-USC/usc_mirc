@@ -50,7 +50,7 @@ function usc_mirc_menu() {
       variable_get('usc_mirc_mezzanine_folder', '/mnt/mirc/mezz/mezzanine'),
       2,
     ),
-    'access arguments' => array('administer usc_mirc'),
+    'access callback' => 'usc_mirc_role_access_callback',
     'type' => MENU_CALLBACK,
   );
   $items['usc/streaming-autocomplete'] = array(
@@ -60,7 +60,7 @@ function usc_mirc_menu() {
       variable_get('usc_mirc_streaming_folder', '/mnt/mirc/mezz/access'),
       2,
     ),
-    'access arguments' => array('administer usc_mirc'),
+    'access callback' => 'usc_mirc_role_access_callback',
     'type' => MENU_CALLBACK,
   );
   $items['usc/create_access_copy'] = array(
@@ -1479,4 +1479,20 @@ function usc_mirc_islandora_handle_get_xsl_files() {
  */
 function usc_mirc_pbcore_export_access($obj) {
   return in_array('usc:collectionCModel', $obj->models) && user_access('administer usc_mirc');
+}
+
+/**
+ * Determine if the user has one of the generally allowed roles.
+ */
+function usc_mirc_role_access_callback() {
+  global $user;
+
+  $roles = array(
+    'administrator',
+    'Creator',
+    'Editor',
+    'Manager',
+  );
+
+  return (count(array_intersect($roles, $user->roles)) > 0);
 }
