@@ -23,7 +23,6 @@
  *   Markup for the generated image.
  */
 function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_preset = NULL) {
-  module_load_include('inc', 'islandora', 'includes/authtokens');
   $object = islandora_object_load($pid);
   $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
 
@@ -34,11 +33,7 @@ function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_pre
   else {
     $dsid = 'TN';
   }
-  $token = islandora_get_object_token($object->id, $dsid, '2');
-  $image = url("islandora/object/$pid/datastream/$dsid/view", array(
-    'absolute' => TRUE,
-    'query' => array('token' => $token),
-  ));
+  $image = usc_mirc_get_imagecache_token_url($object, $dsid);
 
   if (module_exists('imagecache_external') && is_callable('theme_imagecache_external')) {
     return theme('imagecache_external', array(
@@ -826,4 +821,25 @@ function usc_mirc_log_pbcore_export_no_records($log_fp) {
 function usc_mirc_log_pbcore_export_footer($log_fp) {
   fwrite($log_fp, "Export successfully finished at " . usc_mirc_format_time(time()) . "\n");
   fwrite($log_fp, "\n");
+}
+
+/**
+ * Retrieves the image url with token attached for the specified datastream.
+ *
+ * @param AbstractObject $object
+ *   An AbstractObject representing and object within Fedora.
+ * @param string $dsid
+ *   The datastream we are retrieving.
+ *
+ * @return string
+ *   The URL to the image with token appended.
+ */
+function usc_mirc_get_imagecache_token_url($object, $dsid) {
+  module_load_include('inc', 'islandora', 'includes/authtokens');
+  $token = islandora_get_object_token($object->id, $dsid, '2');
+  $image = url("islandora/object/$object->id/datastream/$dsid/view", array(
+    'absolute' => TRUE,
+    'query' => array('token' => $token),
+  ));
+  return $image;
 }

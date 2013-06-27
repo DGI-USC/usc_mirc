@@ -1253,6 +1253,7 @@ function usc_mirc_usc_vrocmodel_islandora_solr_object_result_alter(&$object_inde
  * object has an image datastream, it gets passed through imagecache external.
  */
 function usc_mirc_islandora_solr_results_alter(&$object_results, $query_processor) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $image_ds = array('TN', 'IMG', 'JPG');
   foreach ($object_results as $key => $object_result) {
     $path = NULL;
@@ -1267,14 +1268,13 @@ function usc_mirc_islandora_solr_results_alter(&$object_results, $query_processo
     }
     foreach ($image_ds as $ds) {
       if (in_array($ds, $object_result['datastreams'])) {
-        $path = 'islandora/object/' . $object_result['PID'] . '/datastream/' . $ds . '/view';
+        $temp_object = islandora_object_load($object_result['PID']);
+        $path = usc_mirc_get_imagecache_token_url($temp_object, $ds);
         continue;
       }
     }
     if (!empty($path)) {
       $preset = variable_get('usc_mirc_solr_imagecache_thumbnail_preset', 'usc_solr_thumbnail');
-      // Datastream image url.
-      $path = url($path, array('absolute' => TRUE));
       // Path to local copy of the datastream image.
       $uri = imagecache_external_generate_path($path, $preset);
       // Path to image style generated from the local datastream image.
