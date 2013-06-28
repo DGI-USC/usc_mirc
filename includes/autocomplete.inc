@@ -50,7 +50,12 @@ function usc_mirc_traverse_directory($url_base, $filesystem_base, $string, $sub_
           $videos = array_merge($videos, usc_mirc_traverse_directory($url_base, $filesystem_base, $string, $this_entry, $recurse));
         }
         // XXX:  Should probably get rid of the wildcard.
-        elseif ($string === '*' || strpos($entry, $string) === 0) {
+        elseif (($string === '*' || strpos($entry, $string) === 0)) {
+          // If the search string doesn't start with '._' and the entry does,
+          // avoid returning the given entry.
+          if (strpos($string, '._') !== 0 && strpos($entry, '._') === 0) {
+            continue;
+          }
           $videos["$url_base/$this_entry"] = $entry;
         }
       }
