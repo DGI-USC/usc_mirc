@@ -63,19 +63,16 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
 
   // Query to count preservation masters that are members of this collection.
-  $query = 'select count(
-              select $obj
-              from <#ri>
-              where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $obj->id . '>
-                    and $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>)
-            from <#ri>
-            where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $obj->id . '>
-                  and $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>';
+  $query = <<<EOQ
+SELECT ?obj
+FROM <#ri>
+WHERE {
+  $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/{$obj->id}> ;
+       <fedora-model:hasModel> <info:fedora/{$vro_cmodel}> .
+}
+EOQ;
   $tuque = islandora_get_tuque_connection();
-  $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
-  if (isset($results[0]['k0']['value'])) {
-    $total = $results[0]['k0']['value'];
-  }
+  $total = $tuque->repository->ri->countQuery($query, 'sparql');
 
   // Process the export as a batch if there's records to export.  Otherwise
   // just redirect back with a message.
@@ -181,16 +178,20 @@ function usc_mirc_pbcore_export_batch_operation($output_dir, $coll, $limit, $off
   $vro_cmodel = variable_get('usc_mirc_cmodel_vro', 'usc:vroCModel');
 
   // Query for all preservation masters that are members of this collection.
-  $query = 'select $obj $time
-            from <#ri>
-            where $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/' . $coll->id . '>
-                  and $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
-                  and $obj <fedora-view:lastModifiedDate> $time
-            order by $time
-            limit ' . $limit . '
-            offset ' . $offset;
+  $query = <<<EOQ
+SELECT ?obj ?time
+FROM <#ri>
+WHERE {
+  ?obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/{$coll->id}> ;
+       <fedora-model:hasModel> <info:fedora/{$vro_cmodel}> ;
+       <fedora-view:lastModifiedDate> ?time .
+}
+ORDER by ?time
+LIMIT $limit
+OFFSET $offset
+EOQ;
   $tuque = islandora_get_tuque_connection();
-  $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
+  $results = $tuque->repository->ri->sparqlQuery($query);
 
   if (!empty($results)) {
     // Open the log file.
