@@ -48,7 +48,7 @@ function usc_mirc_cron_export_pbcore($limit = 100) {
 
   try {
     // Log the manifest header.
-    usc_mirc_log_pbcore_export_header($log_fp, $obj);
+    usc_mirc_log_pbcore_export_header($log_fp);
 
     // Set up the batch.
     $batch = array(
