@@ -161,7 +161,6 @@ EOQ;
  *   The context array for the current batch being processed.
  */
 function usc_mirc_pbcore_export_batch_operation($output_dir, $coll, $limit, $offset, $total, &$context) {
-
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
 
   // Grab the offset out of the context if it exists.
@@ -184,7 +183,9 @@ FROM <#ri>
 WHERE {
   ?obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/{$coll->id}> ;
        <fedora-model:hasModel> <info:fedora/{$vro_cmodel}> ;
-       <fedora-view:lastModifiedDate> ?time .
+       <fedora-view:disseminates> ?ds .
+  ?ds <fedora-view:disseminationType> <info:fedora/*/PBCORE> ;
+      <fedora-view:lastModifiedDate> ?time .
 }
 ORDER by ?time
 LIMIT $limit

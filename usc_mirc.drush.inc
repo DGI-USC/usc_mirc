@@ -109,7 +109,9 @@ SELECT ?obj ?time
 FROM <#ri>
 WHERE {
   ?obj <fedora-model:hasModel> <info:fedora/{$vro_cmodel}> ;
-       <fedora-view:lastModifiedDate> ?time .
+       <fedora-view:disseminates> ?ds .
+  ?ds <fedora-view:disseminationType> <info:fedora/*/PBCORE> ;
+      <fedora-view:lastModifiedDate> ?time .
   FILTER (?time > '$last_export_time'^^<xsd:dateTime>)
 }
 ORDER by ?time
