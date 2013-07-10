@@ -48,7 +48,7 @@ function usc_mirc_cron_export_pbcore($limit = 100) {
 
   try {
     // Log the manifest header.
-    usc_mirc_log_pbcore_export_header($log_fp, $obj);
+    usc_mirc_log_pbcore_export_header($log_fp);
 
     // Set up the batch.
     $batch = array(
@@ -104,15 +104,21 @@ function usc_mirc_cron_pbcore_export_batch_operation($output_dir, $limit, &$cont
 
   // Query for all preservation masters that have been updated since last
   // export.
-  $query = 'select $obj $time
-            from <#ri>
-            where $obj <fedora-model:hasModel> <info:fedora/' . $vro_cmodel . '>
-                  and $obj <fedora-view:lastModifiedDate> $time
-                  and $time <mulgara:after> \'' . $last_export_time . '\'^^<xml-schema:dateTime> in <#xsd>
-            order by $time
-            limit ' . $limit;
+  $query = <<<EOQ
+SELECT ?obj ?time
+FROM <#ri>
+WHERE {
+  ?obj <fedora-model:hasModel> <info:fedora/{$vro_cmodel}> ;
+       <fedora-view:disseminates> ?ds .
+  ?ds <fedora-view:disseminationType> <info:fedora/*/PBCORE> ;
+      <fedora-view:lastModifiedDate> ?time .
+  FILTER (?time > '$last_export_time'^^<xsd:dateTime>)
+}
+ORDER by ?time
+LIMIT $limit
+EOQ;
   $tuque = islandora_get_tuque_connection();
-  $results = $tuque->repository->ri->itqlQuery($query, 'unlimited');
+  $results = $tuque->repository->ri->sparqlQuery($query);
 
   $log_path = $output_dir . 'pbcore_export.log';
   $context['results']['log_path'] = $log_path;
