@@ -67,7 +67,7 @@ function usc_mirc_export_collection_confirm_form_submit($form, &$form_state) {
 SELECT ?obj
 FROM <#ri>
 WHERE {
-  $obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/{$obj->id}> ;
+  ?obj <fedora-rels-ext:isMemberOfCollection> <info:fedora/{$obj->id}> ;
        <fedora-model:hasModel> <info:fedora/{$vro_cmodel}> .
 }
 EOQ;
