@@ -1521,7 +1521,7 @@ function usc_mirc_export_objects_as_CSV($pids) {
         $type = t('Access Variant');
       }
     }
-    else {
+    elseif (in_array('usc:vroCModel', $temp_object->models)) {
       $title = $pres_metadata[$pid]['title'];
       $type = t('Preservation Master');
     }
@@ -1530,7 +1530,8 @@ function usc_mirc_export_objects_as_CSV($pids) {
       $type,
       $title,
       $pres_metadata[$mapping[$pid]]['item_title'],
-      $pres_metadata[$mapping[$pid]]['production_date'],
+      $pres_metadata[$mapping[$pid]]['start_date'],
+      $pres_metadata[$mapping[$pid]]['end_date'],
       $pres_metadata[$mapping[$pid]]['description'],
       $pres_metadata[$mapping[$pid]]['temporal_coverage'],
       $pres_metadata[$mapping[$pid]]['sound'],
@@ -1548,7 +1549,8 @@ function usc_mirc_export_objects_as_CSV($pids) {
     t('Object Type'),
     t('Title'),
     t('Item Title'),
-    t('Production Dates'),
+    t('Production Start Date'),
+    t('Production End Date'),
     t('Description'),
     t('Temporal Coverage'),
     t('Silent or Sound'),

@@ -853,67 +853,29 @@ function usc_mirc_get_imagecache_token_url($object, $dsid) {
 function usc_mirc_extract_metadata_from_preservation_master($pid) {
   $object = islandora_object_load($pid);
   $pres_metadata = array();
+  $pres_xpath = array(
+    'title' => '/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@annotation="Title supplied by cataloger."]/text()',
+    'item_title' => '/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@titleType="Item"]',
+    'temporal_coverage' => '/pb:pbcoreDescriptionDocument/pb:pbcoreCoverage[pb:coverageType="Temporal"]/pb:coverage',
+    'description' => '/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="summary"]',
+    'sound' => '/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="sound content"]/text()',
+    'start_date' => '/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdStart"]',
+    'end_date' => '/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdEnd" and not(text()=/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdStart"]/text())]',
+    'donor' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="donor_info"]',
+    'preservation_statement' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="preservedBy"]',
+    'copyright_statement' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="copyright_statement"]',
+  );
   if (!isset($object['PBCORE'])) {
     return array();
   }
   else {
     $pbcore = simplexml_load_string($object['PBCORE']->content);
     $pbcore->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
-
-    // Title will only be used if the pid being exported as actually a
-    // preservation master.
-    $title_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@annotation="Title supplied by cataloger."]/text()');
-    $title = (string) reset($title_xpath);
-    $pres_metadata['title'] = $title;
-
-    // Item title.
-    $item_title_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@titleType="Item"]');
-    $item_title = (string) reset($item_title_xpath);
-    $pres_metadata['item_title'] = $item_title;
-
-    // Temporal coverage.
-    $temporal_coverage_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreCoverage[pb:coverageType="Temporal"]/pb:coverage');
-    $temporal_coverage = (string) reset($temporal_coverage_xpath);
-    $pres_metadata['temporal_coverage'] = $temporal_coverage;
-
-    // Description.
-    $description_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="summary"]');
-    $description = (string) reset($description_xpath);
-    $pres_metadata['description'] = $description;
-
-    // Silent or sound.
-    $sound_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="sound content"]/text()');
-    $sound = (string) reset($sound_xpath);
-    $pres_metadata['sound'] = $sound;
-
-    // Production date(s).
-    $start_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdStart"]');
-    $start_date = (string) reset($start_xpath);
-    $end_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdEnd" and not(text()=/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdStart"]/text())]');
-    $end_date = (string) reset($end_xpath);
-    if ($end_date) {
-      $date_string = $start_date . ' to ' . $end_date;
+    foreach ($pres_xpath as $title => $xpath) {
+      $pbcore_xpath = $pbcore->xpath($xpath);
+      $entry = (string) reset($pbcore_xpath);
+      $pres_metadata[$title] = $entry;
     }
-    else {
-      $date_string = $start_date;
-    }
-    $pres_metadata['production_date'] = $date_string;
-
-    // Donor.
-    $donor_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="donor_info"]');
-    $donor = (string) reset($donor_xpath);
-    $pres_metadata['donor'] = $donor;
-
-    // Preservation statement.
-    $preservation_statement_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="preservedBy"]');
-    $preservation_statement = (string) reset($preservation_statement_xpath);
-    $pres_metadata['preservation_statement'] = $preservation_statement;
-
-    // Copyright statement.
-    $copyright_statement_xpath = $pbcore->xpath('/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="copyright_statement"]');
-    $copyright_statement = (string) reset($copyright_statement_xpath);
-    $pres_metadata['copyright_statement'] = $copyright_statement;
-
     return $pres_metadata;
   }
 }
