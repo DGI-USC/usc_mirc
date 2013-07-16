@@ -1509,8 +1509,8 @@ function usc_mirc_export_objects_as_CSV($pids) {
   foreach ($pres_masters as $pres_pid => $pid_array) {
     $pres_metadata[$pres_pid] = usc_mirc_extract_metadata_from_preservation_master($pres_pid);
   }
-  $type = t('Islandora Object');
   foreach ($pids as $pid) {
+    $type = t('Islandora Object');
     if (array_key_exists($pid, $mapping)) {
       $temp_object = islandora_object_load($pid);
       if (array_intersect(array('usc:mezzanineCModel', 'usc:accessCModel'), $temp_object->models)) {
