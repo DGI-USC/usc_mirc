@@ -1509,36 +1509,45 @@ function usc_mirc_export_objects_as_CSV($pids) {
   foreach ($pres_masters as $pres_pid => $pid_array) {
     $pres_metadata[$pres_pid] = usc_mirc_extract_metadata_from_preservation_master($pres_pid);
   }
+  $type = t('Islandora Object');
   foreach ($pids as $pid) {
-    $temp_object = islandora_object_load($pid);
-    $type = t('Islandora Object');
-    if (array_intersect(array('usc:mezzanineCModel', 'usc:accessCModel'), $temp_object->models)) {
-      $title = usc_mirc_extract_title_from_pbcore($pid);
-      if (in_array('usc:mezzanineCModel', $temp_object->models)) {
-        $type = t('Mezzanine');
+    if (array_key_exists($pid, $mapping)) {
+      $temp_object = islandora_object_load($pid);
+      if (array_intersect(array('usc:mezzanineCModel', 'usc:accessCModel'), $temp_object->models)) {
+        $title = usc_mirc_extract_title_from_pbcore($pid);
+        if (in_array('usc:mezzanineCModel', $temp_object->models)) {
+          $type = t('Mezzanine');
+        }
+        elseif (in_array('usc:accessCModel', $temp_object->models)) {
+          $type = t('Access Variant');
+        }
       }
-      elseif (in_array('usc:accessCModel', $temp_object->models)) {
-        $type = t('Access Variant');
+      elseif (in_array('usc:vroCModel', $temp_object->models)) {
+        $title = $pres_metadata[$pid]['title'];
+        $type = t('Preservation Master');
       }
+      $csv_array[] = array(
+        $pid,
+        $type,
+        $title,
+        $pres_metadata[$mapping[$pid]]['item_title'],
+        $pres_metadata[$mapping[$pid]]['start_date'],
+        $pres_metadata[$mapping[$pid]]['end_date'],
+        $pres_metadata[$mapping[$pid]]['description'],
+        $pres_metadata[$mapping[$pid]]['temporal_coverage'],
+        $pres_metadata[$mapping[$pid]]['sound'],
+        $pres_metadata[$mapping[$pid]]['donor'],
+        $pres_metadata[$mapping[$pid]]['copyright_statement'],
+        $pres_metadata[$mapping[$pid]]['preservation_statement'],
+      );
     }
-    elseif (in_array('usc:vroCModel', $temp_object->models)) {
-      $title = $pres_metadata[$pid]['title'];
-      $type = t('Preservation Master');
+    else {
+      $csv_array[] = array(
+        $pid,
+        $type,
+        $title,
+      );
     }
-    $csv_array[] = array(
-      $pid,
-      $type,
-      $title,
-      $pres_metadata[$mapping[$pid]]['item_title'],
-      $pres_metadata[$mapping[$pid]]['start_date'],
-      $pres_metadata[$mapping[$pid]]['end_date'],
-      $pres_metadata[$mapping[$pid]]['description'],
-      $pres_metadata[$mapping[$pid]]['temporal_coverage'],
-      $pres_metadata[$mapping[$pid]]['sound'],
-      $pres_metadata[$mapping[$pid]]['donor'],
-      $pres_metadata[$mapping[$pid]]['copyright_statement'],
-      $pres_metadata[$mapping[$pid]]['preservation_statement'],
-    );
   }
   drupal_add_http_header('Content-Type', 'text/csv');
   drupal_add_http_header('Content-Disposition', 'attachment;filename=islandora_bookmark_export.csv');

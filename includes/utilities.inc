@@ -887,8 +887,8 @@ function usc_mirc_extract_metadata_from_preservation_master($pid) {
  *   The pid of the object we are going to XPATH through.
  */
 function usc_mirc_extract_title_from_pbcore($pid) {
-  $title = '';
   $object = islandora_object_load($pid);
+  $title = $object->label;
   if (isset($object['PBCORE'])) {
     $pbcore = simplexml_load_string($object['PBCORE']->content);
     $pbcore->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
