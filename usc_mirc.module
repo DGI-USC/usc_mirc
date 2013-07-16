@@ -1367,6 +1367,7 @@ function usc_mirc_islandora_bookmark_export_handler() {
   if (user_access('access USC video export')) {
     $usc_mirc = array();
     $usc_mirc['USC']['Text'] = 'usc_mirc_export_objects_as_text';
+    $usc_mirc['USC']['CSV'] = 'usc_mirc_export_objects_as_CSV';
     return $usc_mirc;
   }
 }
@@ -1462,6 +1463,115 @@ function usc_mirc_export_objects_as_text($pids) {
     drupal_add_http_header('Content-Disposition', 'attachment;filename=my_video_export.txt');
     drupal_exit();
   }
+}
+
+/**
+ * Performs USC's custom export functionality in CSV form.
+ *
+ * @param array $pids
+ *   An array of pids ready for export.
+ */
+function usc_mirc_export_objects_as_CSV($pids) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  // Send response headers to the browser.
+  $csv_array = array();
+  // The pres_masters array is mapped in the form of preservation master pid =>
+  // array of pids it's related to. Thus we do not go out and make multiple
+  // calls when XPATHing PBCore as the majority of the fields only exist
+  // at the preservation master level.
+  $pres_masters = array();
+  // The mapping array holds the 1-to-1 mapping of pid => preservation master.
+  $mapping = array();
+  foreach ($pids as $pid) {
+    $object = islandora_object_load($pid);
+    // It's a preservation master.
+    if (in_array('usc:vroCModel', $object->models)) {
+      $pres_masters[$pid][] = $pid;
+      $mapping[$pid] = $pid;
+    }
+    // It's a mezzanine!
+    elseif (in_array('usc:mezzanineCModel', $object->models)) {
+      $pres_rel = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isDerivativeOf');
+      $pres_masters[$pres_rel[0]['object']['value']][] = $pid;
+      $mapping[$pid] = $pres_rel[0]['object']['value'];
+    }
+    // It's a access variant!
+    elseif (in_array('usc:accessCModel', $object->models)) {
+      $mezz_rel = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isDerivativeOf');
+      $mezz_pid = $mezz_rel[0]['object']['value'];
+      $mezz_object = islandora_object_load($mezz_pid);
+      $pres_rel = $mezz_object->relationships->get(FEDORA_RELS_EXT_URI, 'isDerivativeOf');
+      $pres_masters[$pres_rel[0]['object']['value']][] = $pid;
+      $mapping[$pid] = $pres_rel[0]['object']['value'];
+    }
+  }
+  $pres_metadata = array();
+  foreach ($pres_masters as $pres_pid => $pid_array) {
+    $pres_metadata[$pres_pid] = usc_mirc_extract_metadata_from_preservation_master($pres_pid);
+  }
+  foreach ($pids as $pid) {
+    $type = t('Islandora Object');
+    if (array_key_exists($pid, $mapping)) {
+      $temp_object = islandora_object_load($pid);
+      if (array_intersect(array('usc:mezzanineCModel', 'usc:accessCModel'), $temp_object->models)) {
+        $title = usc_mirc_extract_title_from_pbcore($pid);
+        if (in_array('usc:mezzanineCModel', $temp_object->models)) {
+          $type = t('Mezzanine');
+        }
+        elseif (in_array('usc:accessCModel', $temp_object->models)) {
+          $type = t('Access Variant');
+        }
+      }
+      elseif (in_array('usc:vroCModel', $temp_object->models)) {
+        $title = $pres_metadata[$pid]['title'];
+        $type = t('Preservation Master');
+      }
+      $csv_array[] = array(
+        $pid,
+        $type,
+        $title,
+        $pres_metadata[$mapping[$pid]]['item_title'],
+        $pres_metadata[$mapping[$pid]]['start_date'],
+        $pres_metadata[$mapping[$pid]]['end_date'],
+        $pres_metadata[$mapping[$pid]]['description'],
+        $pres_metadata[$mapping[$pid]]['temporal_coverage'],
+        $pres_metadata[$mapping[$pid]]['sound'],
+        $pres_metadata[$mapping[$pid]]['donor'],
+        $pres_metadata[$mapping[$pid]]['copyright_statement'],
+        $pres_metadata[$mapping[$pid]]['preservation_statement'],
+      );
+    }
+    else {
+      $csv_array[] = array(
+        $pid,
+        $type,
+        $title,
+      );
+    }
+  }
+  drupal_add_http_header('Content-Type', 'text/csv');
+  drupal_add_http_header('Content-Disposition', 'attachment;filename=islandora_bookmark_export.csv');
+
+  $fp = fopen('php://output', 'w');
+  fputcsv($fp, array(
+    t('PID'),
+    t('Object Type'),
+    t('Title'),
+    t('Item Title'),
+    t('Production Start Date'),
+    t('Production End Date'),
+    t('Description'),
+    t('Temporal Coverage'),
+    t('Silent or Sound'),
+    t('Donor'),
+    t('Copyright Statement'),
+    t('Preservation Statement'),
+  ));
+  foreach ($csv_array as $line) {
+    fputcsv($fp, $line);
+  }
+  fclose($fp);
+  drupal_exit();
 }
 
 /**

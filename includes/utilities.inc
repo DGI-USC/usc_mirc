@@ -843,3 +843,58 @@ function usc_mirc_get_imagecache_token_url($object, $dsid) {
   ));
   return $image;
 }
+
+/**
+ * Goes out and XPATHs the preservation master for use in CSV export.
+ *
+ * @param string $pid
+ *   The pid of the preservation master we are going to XPATH through.
+ */
+function usc_mirc_extract_metadata_from_preservation_master($pid) {
+  $object = islandora_object_load($pid);
+  $pres_metadata = array();
+  $pres_xpath = array(
+    'title' => '/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@annotation="Title supplied by cataloger."]/text()',
+    'item_title' => '/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@titleType="Item"]',
+    'temporal_coverage' => '/pb:pbcoreDescriptionDocument/pb:pbcoreCoverage[pb:coverageType="Temporal"]/pb:coverage',
+    'description' => '/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="summary"]',
+    'sound' => '/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="sound content"]/text()',
+    'start_date' => '/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdStart"]',
+    'end_date' => '/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdEnd" and not(text()=/pb:pbcoreDescriptionDocument/pb:pbcoreAssetDate[@dateType="createdStart"]/text())]',
+    'donor' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="donor_info"]',
+    'preservation_statement' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="preservedBy"]',
+    'copyright_statement' => '/pb:pbcoreDescriptionDocument/pb:pbcoreRightsSummary/pb:rightsSummary[@source="copyright_statement"]',
+  );
+  if (!isset($object['PBCORE'])) {
+    return array();
+  }
+  else {
+    $pbcore = simplexml_load_string($object['PBCORE']->content);
+    $pbcore->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+    foreach ($pres_xpath as $title => $xpath) {
+      $pbcore_xpath = $pbcore->xpath($xpath);
+      $entry = (string) reset($pbcore_xpath);
+      $pres_metadata[$title] = $entry;
+    }
+    return $pres_metadata;
+  }
+}
+
+/**
+ * Goes out and XPATHs an access variant or mezzanine for its title.
+ *
+ * @param string $pid
+ *   The pid of the object we are going to XPATH through.
+ */
+function usc_mirc_extract_title_from_pbcore($pid) {
+  $object = islandora_object_load($pid);
+  $title = $object->label;
+  if (isset($object['PBCORE'])) {
+    $pbcore = simplexml_load_string($object['PBCORE']->content);
+    $pbcore->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
+    $pbcore_xpath = $pbcore->xpath('/pb:pbcoreInstantiationDocument/pb:instantiationAnnotation[@annotationType="instantiation_title"]/text()');
+    $pbcore_title = (string) reset($pbcore_xpath);
+    $title = $pbcore_title;
+  }
+  return $title;
+}
