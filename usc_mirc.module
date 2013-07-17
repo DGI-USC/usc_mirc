@@ -1510,28 +1510,18 @@ function usc_mirc_export_objects_as_CSV($pids) {
     $pres_metadata[$pres_pid] = usc_mirc_extract_metadata_from_preservation_master($pres_pid);
   }
   foreach ($pids as $pid) {
-    $type = t('Islandora Object');
     if (array_key_exists($pid, $mapping)) {
       $temp_object = islandora_object_load($pid);
+      $title = $temp_object->label;
       if (array_intersect(array('usc:mezzanineCModel', 'usc:accessCModel'), $temp_object->models)) {
         $title = usc_mirc_extract_title_from_pbcore($pid);
-        if (in_array('usc:mezzanineCModel', $temp_object->models)) {
-          $type = t('Mezzanine');
-        }
-        elseif (in_array('usc:accessCModel', $temp_object->models)) {
-          $type = t('Access Variant');
-        }
       }
       elseif (in_array('usc:vroCModel', $temp_object->models)) {
         $title = $pres_metadata[$pid]['title'];
-        $type = t('Preservation Master');
       }
       $csv_array[] = array(
-        $type,
         $title,
         $pres_metadata[$mapping[$pid]]['item_title'],
-        $pres_metadata[$mapping[$pid]]['start_date'],
-        $pres_metadata[$mapping[$pid]]['end_date'],
         $pres_metadata[$mapping[$pid]]['description'],
         $pres_metadata[$mapping[$pid]]['temporal_coverage'],
         $pres_metadata[$mapping[$pid]]['sound'],
@@ -1543,10 +1533,7 @@ function usc_mirc_export_objects_as_CSV($pids) {
     }
     else {
       $csv_array[] = array(
-        $type,
         $title,
-        '',
-        '',
         '',
         '',
         '',
@@ -1563,11 +1550,8 @@ function usc_mirc_export_objects_as_CSV($pids) {
 
   $fp = fopen('php://output', 'w');
   fputcsv($fp, array(
-    t('Object Type'),
     t('Title'),
     t('Item Title'),
-    t('Production Start Date'),
-    t('Production End Date'),
     t('Description'),
     t('Temporal Coverage'),
     t('Silent or Sound'),
