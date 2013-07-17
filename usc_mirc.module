@@ -1527,7 +1527,6 @@ function usc_mirc_export_objects_as_CSV($pids) {
         $type = t('Preservation Master');
       }
       $csv_array[] = array(
-        $pid,
         $type,
         $title,
         $pres_metadata[$mapping[$pid]]['item_title'],
@@ -1539,13 +1538,23 @@ function usc_mirc_export_objects_as_CSV($pids) {
         $pres_metadata[$mapping[$pid]]['donor'],
         $pres_metadata[$mapping[$pid]]['copyright_statement'],
         $pres_metadata[$mapping[$pid]]['preservation_statement'],
+        $pid,
       );
     }
     else {
       $csv_array[] = array(
-        $pid,
         $type,
         $title,
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        $pid,
       );
     }
   }
@@ -1554,7 +1563,6 @@ function usc_mirc_export_objects_as_CSV($pids) {
 
   $fp = fopen('php://output', 'w');
   fputcsv($fp, array(
-    t('PID'),
     t('Object Type'),
     t('Title'),
     t('Item Title'),
@@ -1566,6 +1574,7 @@ function usc_mirc_export_objects_as_CSV($pids) {
     t('Donor'),
     t('Copyright Statement'),
     t('Preservation Statement'),
+    t('Persistent Identifier'),
   ));
   foreach ($csv_array as $line) {
     fputcsv($fp, $line);
