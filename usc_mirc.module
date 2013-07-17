@@ -1633,6 +1633,7 @@ function usc_mirc_form_islandora_ingest_form_alter(&$form, &$form_state) {
  * From islandora_ingest_form, causes the object's PBCore to be exported.
  */
 function usc_mirc_export_from_ingest_submit($form, $form_state) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
   $object = islandora_ingest_form_get_object($form_state);
   usc_mirc_export_single_pbcore($object->id);
 }
@@ -1656,40 +1657,6 @@ function usc_mirc_form_xml_form_builder_edit_datastream_form_alter(&$form, &$for
  * exported.
  */
 function usc_mirc_export_from_edit_submit($form, $form_state) {
-  usc_mirc_export_single_pbcore($form_state['datastream']->parent->id);
-}
-
-/**
- * Export the PBCore from a single object.
- *
- * @param string $pid
- *   The PID of an object.
- */
-function usc_mirc_export_single_pbcore($pid) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
-
-  // Get the output directory from the database and naively sanitize it.
-  $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mirc/mezz/PBCore_Watch');
-  if (substr($output_dir, -1) != '/') {
-    $output_dir .= '/';
-  }
-
-  // Open a pointer to the logfile.
-  $log_path = $output_dir . 'pbcore_export.log';
-  $log_fp = fopen($log_path, 'a');
-
-  try {
-    usc_mirc_log_pbcore_export_header($log_fp);
-
-    $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
-    usc_mirc_export_pbcore($pid, $output_path);
-
-    // Log the export.
-    usc_mirc_log_pbcore_export_record($log_fp, $output_path);
-    fclose($log_fp);
-  }
-  catch (Exception $e) {
-    fclose($log_fp);
-    throw $e;
-  }
+  usc_mirc_export_single_pbcore($form_state['datastream']->parent->id);
 }
