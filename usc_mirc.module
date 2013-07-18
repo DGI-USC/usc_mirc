@@ -1376,7 +1376,10 @@ function usc_mirc_islandora_bookmark_export_handler() {
  * Implements islandora_bookmark_export_handler_alter().
  */
 function usc_mirc_islandora_bookmark_export_handler_alter(&$output) {
-  unset($output['Bookmark']);
+  global $user;
+  if ($user->uid != 0) {
+    unset($output['Bookmark']);
+  }
 }
 
 /**
