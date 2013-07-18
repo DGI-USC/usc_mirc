@@ -854,7 +854,7 @@ function usc_mirc_extract_metadata_from_preservation_master($pid) {
   $object = islandora_object_load($pid);
   $pres_metadata = array();
   $pres_xpath = array(
-    'title' => '/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@annotation="Title supplied by cataloger."]/text()',
+    'title' => '/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@titleType="Main"]/text()',
     'item_title' => '/pb:pbcoreDescriptionDocument/pb:pbcoreTitle[@titleType="Item"]',
     'temporal_coverage' => '/pb:pbcoreDescriptionDocument/pb:pbcoreCoverage[pb:coverageType="Temporal"]/pb:coverage',
     'description' => '/pb:pbcoreDescriptionDocument/pb:pbcoreDescription[@descriptionType="summary"]',
