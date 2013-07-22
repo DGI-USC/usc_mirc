@@ -1616,3 +1616,51 @@ function usc_mirc_role_access_callback() {
 
   return (count(array_intersect($roles, $user->roles)) > 0);
 }
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Adds in another submit handler, to export the PBCore.
+ */
+function usc_mirc_form_islandora_ingest_form_alter(&$form, &$form_state) {
+  if ((($metadata_step = islandora_ingest_form_get_step_storage($form_state, 'xml_form_builder_metadata_step')) &&
+    isset($metadata_step['association']) && ($association = $metadata_step['association']) &&
+    $association['content_model'] == 'usc:vroCModel' && $association['dsid'] == 'PBCORE')) {
+
+    $form['next']['#submit'][] = 'usc_mirc_export_from_ingest_submit';
+  }
+}
+
+/**
+ * Form submission handler.
+ *
+ * From islandora_ingest_form, causes the object's PBCore to be exported.
+ */
+function usc_mirc_export_from_ingest_submit($form, $form_state) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  $object = islandora_ingest_form_get_object($form_state);
+  usc_mirc_export_single_pbcore($object->id);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Adds in another submit handler, to export the PBCore.
+ */
+function usc_mirc_form_xml_form_builder_edit_datastream_form_alter(&$form, &$form_state) {
+  if (isset($form_state['association']) && ($association = $form_state['association']) &&
+    $association['content_model'] == 'usc:vroCModel' && $association['dsid'] == 'PBCORE') {
+    $form['update']['#submit'][] = 'usc_mirc_export_from_edit_submit';
+  }
+}
+
+/**
+ * Form submission handler.
+ *
+ * From xml_form_builder_edit_datastream_from, causes the object's PBCore to be
+ * exported.
+ */
+function usc_mirc_export_from_edit_submit($form, $form_state) {
+  module_load_include('inc', 'usc_mirc', 'includes/utilities');
+  usc_mirc_export_single_pbcore($form_state['datastream']->parent->id);
+}
