@@ -898,3 +898,36 @@ function usc_mirc_extract_title_from_pbcore($pid) {
   }
   return $title;
 }
+
+/**
+ * Export the PBCore from a single object.
+ *
+ * @param string $pid
+ *   The PID of an object.
+ */
+function usc_mirc_export_single_pbcore($pid) {
+  // Get the output directory from the database and naively sanitize it.
+  $output_dir = variable_get('usc_mirc_pbcore_export_dir', '/mnt/mirc/mezz/PBCore_Watch');
+  if (substr($output_dir, -1) != '/') {
+    $output_dir .= '/';
+  }
+
+  // Open a pointer to the logfile.
+  $log_path = $output_dir . 'pbcore_export.log';
+  $log_fp = fopen($log_path, 'a');
+
+  try {
+    usc_mirc_log_pbcore_export_header($log_fp);
+
+    $output_path = $output_dir . str_replace(":", "_", $pid) . '_pbcore.xml';
+    usc_mirc_export_pbcore($pid, $output_path);
+
+    // Log the export.
+    usc_mirc_log_pbcore_export_record($log_fp, $output_path);
+    fclose($log_fp);
+  }
+  catch (Exception $e) {
+    fclose($log_fp);
+    throw $e;
+  }
+}
