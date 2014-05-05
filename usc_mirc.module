@@ -435,7 +435,7 @@ function usc_mirc_islandora_required_objects(IslandoraTuque $connection) {
   $datastream->setContentFromFile("$module_path/data/datastreams/usc_mezzanineCModel/DS-COMPOSITE-MODEL.xml", FALSE);
   $usc_mezzanine->ingestDatastream($datastream);
   return array(
-    'MIRC@SC' => array(
+    'usc_mirc' => array(
       'title' => 'MIRC@SC',
       'objects' => array(
         $usc_root_collection,
