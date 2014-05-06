@@ -110,7 +110,7 @@ function usc_mirc_oai_object_response_xml($params) {
           $pres_dc = usc_mirc_oai_perform_xpath($pres_defined_mappings, $pres_pbcore_xml);
         }
 
-        $dc_xml = array_merge_recursive($pres_dc, $mezz_dc);
+        $dc_xml = array_filter(array_merge_recursive($pres_dc, $mezz_dc));
         $writer = new XMLWriter();
         $writer->openMemory();
         $writer->startElement('oai_dc:dc');
