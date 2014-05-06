@@ -435,7 +435,7 @@ function usc_mirc_islandora_required_objects(IslandoraTuque $connection) {
   $datastream->setContentFromFile("$module_path/data/datastreams/usc_mezzanineCModel/DS-COMPOSITE-MODEL.xml", FALSE);
   $usc_mezzanine->ingestDatastream($datastream);
   return array(
-    'MIRC@SC' => array(
+    'usc_mirc' => array(
       'title' => 'MIRC@SC',
       'objects' => array(
         $usc_root_collection,
@@ -1663,4 +1663,39 @@ function usc_mirc_form_xml_form_builder_edit_datastream_form_alter(&$form, &$for
 function usc_mirc_export_from_edit_submit($form, $form_state) {
   module_load_include('inc', 'usc_mirc', 'includes/utilities');
   usc_mirc_export_single_pbcore($form_state['datastream']->parent->id);
+}
+
+/**
+ * Implements hook_islandora_oai_identify_request_handler().
+ */
+function usc_mirc_islandora_oai_identify_request_handler() {
+  return array(
+    'usc_mirc' => array(
+      'label' => t('USC MIRC'),
+      'description' => t("Provides OAI implementation for USC's data structure"),
+      'configuration' => 'admin/islandora/mirc-usc',
+      'requests' => array(
+        'ListIdentifiers' => array(
+          'file' => drupal_get_path('module', 'usc_mirc') . '/includes/handler.inc',
+          'function' => 'usc_mirc_oai_retrieve_records_or_identifiers',
+        ),
+        'ListRecords' => array(
+          'file' => drupal_get_path('module', 'usc_mirc') . '/includes/handler.inc',
+          'function' => 'usc_mirc_oai_retrieve_records_or_identifiers',
+        ),
+        'ListSets' => array(
+          'file' => drupal_get_path('module', 'usc_mirc') . '/includes/handler.inc',
+          'function' => 'usc_mirc_oai_retrieve_sets',
+        ),
+        'response_xml' => array(
+          'file' => drupal_get_path('module', 'usc_mirc') . '/includes/handler.inc',
+          'function' => 'usc_mirc_oai_object_response_xml',
+        ),
+        'set_membership' => array(
+          'file' => drupal_get_path('module', 'usc_mirc') . '/includes/handler.inc',
+          'function' => 'usc_mirc_oai_get_membership',
+        ),
+      ),
+    ),
+  );
 }

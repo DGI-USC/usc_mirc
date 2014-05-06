@@ -48,6 +48,12 @@ function usc_mirc_admin_settings($form, &$form_state) {
       '#description' => t("Directory where PBCORE xml's will reside after a user/cron initiated export.  Please ensure the apache user has access to this directory."),
       '#default_value' => variable_get('usc_mirc_pbcore_export_dir', '/mnt/mircmezz/PBCore_Watch'),
     ),
+    'usc_mirc_parent_collection_solr_field' => array(
+      '#type' => 'textfield',
+      '#title' => t('Parent collection Solr field'),
+      '#description' => t('The field that stores the parent collection of an object.'),
+      '#default_value' => variable_get('usc_mirc_parent_collection_solr_field', 'usc_parent_collection_pid_ms'),
+    ),
     'autocomplete' => array(
       '#type' => 'fieldset',
       '#title' => t('Autocompletion'),
