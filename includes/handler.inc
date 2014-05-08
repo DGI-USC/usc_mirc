@@ -127,7 +127,17 @@ function usc_mirc_oai_object_response_xml($params) {
     }
     // Collection object.
     else {
-      return $object['DC']->content;
+      if (isset($object['MODS'])) {
+        $xslt = new XSLTProcessor();
+        $xsl = new DOMDocument();
+        $xsl->load(drupal_get_path('module', 'usc_mirc') . '/transforms/usc_mods_to_oai_dc.xsl');
+        $mods_xml = new DOMDocument();
+        $mods_xml->loadXML($object['MODS']->content);
+        return $xslt->transformToXml($mods_xml);
+      }
+      else {
+        return $object['DC']->content;
+      }
     }
   }
   return NULL;
