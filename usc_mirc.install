@@ -9,6 +9,9 @@
  * Implements hook_install().
  */
 function usc_mirc_install() {
+  module_load_include('inc', 'islandora', 'includes/solution_packs');
+  islandora_install_solution_pack('usc_mirc');
+
   $types = array(
     'original' => 'Original',
     'edited' => 'Edited',
