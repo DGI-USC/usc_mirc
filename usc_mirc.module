@@ -1274,8 +1274,9 @@ function usc_mirc_islandora_solr_results_alter(&$object_results, $query_processo
     }
     foreach ($image_ds as $ds) {
       if (in_array($ds, $object_result['datastreams'])) {
-        $temp_object = islandora_object_load($object_result['PID']);
-        $path = usc_mirc_get_imagecache_token_url($temp_object, $ds);
+        if ($temp_object = islandora_object_load($object_result['PID'])) {
+          $path = usc_mirc_get_imagecache_token_url($temp_object, $ds);
+        }
         continue;
       }
     }
