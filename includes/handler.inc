@@ -84,14 +84,28 @@ function usc_mirc_oai_object_response_xml($params) {
     // Mezzanine object.
     if (in_array('usc:mezzanineCModel', $object->models)) {
       if (isset($object['PBCORE']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['PBCORE'])) {
+        module_load_include('inc', 'usc_mirc', 'includes/utilities');
         $mezz_pbcore_xml = new SimpleXMLElement($object['PBCORE']->content);
         $mezz_pbcore_xml->registerXpathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
         $mezz_defined_mappings = array(
-          'dc:format' => 'pb:instantiationEssenceTrack/pb:essenceTrackFrameSize/@annotation',
-          'dc:type' => 'pb:instantiationGenerations/text()',
           'dc:identifier' => 'pb:instantiationIdentifier[@source="hdl"]/text()',
         );
-        $mezz_dc = usc_mirc_oai_perform_xpath($mezz_defined_mappings, $mezz_pbcore_xml);
+        $mezz_dc = usc_mirc_oai_perform_xpath($mezz_defined_mappings, $mezz_pbcore_xml, 'mezz');
+        $mezz_parent = usc_mirc_get_mezzanine_parent($object);
+        $mezz_parent_object = islandora_object_load($mezz_parent);
+        // Get the collection for use in dcterms.
+        $collection_rels = $mezz_parent_object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
+        if ($collection_rels) {
+          $member = reset($collection_rels);
+          $collection = $member['object']['value'];
+          $collection_object = islandora_object_load($collection);
+          if ($collection_object && islandora_object_access(ISLANDORA_VIEW_OBJECTS, $collection_object)) {
+            if (!isset($mezz_dc['dcterms:isPartOf'])) {
+              $mezz_dc['dcterms:isPartOf'] = array();
+            }
+            $mezz_dc['dcterms:isPartOf'][] = $collection_object->id;
+          }
+        }
         // Will only be a member of one preservation master.
         $pres_rels = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isDerivativeOf');
         $pres_rels = reset($pres_rels);
@@ -102,19 +116,32 @@ function usc_mirc_oai_object_response_xml($params) {
           $pres_pbcore_xml->registerXpathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
           $pres_defined_mappings = array(
             'dc:title' => 'pb:pbcoreTitle[@titleType="Main" and normalize-space(text())]',
-            'dc:alternative' => 'pb:pbcoreTitle[not(@titleType="Main") and normalize-space(text())]',
+            'dcterms:alternative' => 'pb:pbcoreTitle[not(@titleType="Main") and normalize-space(text())]',
             'dc:subject' => 'pb:pbcoreSubject[text()] | pb:pbcoreGenre[text()]',
             'dc:description' => 'pb:pbcoreDescription[@descriptionType="summary" and text()]',
             'dc:coverage' => 'pb:pbcoreCoverage[pb:coverageType[text() = "Spatial"]]/pb:coverage[text()]/text()',
+            'dc:format' => 'pb:pbcoreDescription[@descriptionType="sound content"]/text()',
+            'dc:rights' => 'pb:pbcoreRightsSummary/pb:rightsSummary[@source="copyright_statement"]/text()',
           );
-          $pres_dc = usc_mirc_oai_perform_xpath($pres_defined_mappings, $pres_pbcore_xml);
+          $pres_dc = usc_mirc_oai_perform_xpath($pres_defined_mappings, $pres_pbcore_xml, 'pres');
         }
 
         $dc_xml = array_filter(array_merge_recursive($pres_dc, $mezz_dc));
+        if (!isset($dc_xml['dc:type'])) {
+          $dc_xml['dc:type'] = array();
+        }
+        $dc_xml['dc:type'][] = 'MovingImage';
+        if (!isset($dc_xml['dc:publisher'])) {
+          $dc_xml['dc:publisher'] = array();
+        }
+        $dc_xml['dc:publisher'][] = 'University of South Carolina. Moving Image Research Collections';
+        // Sort the array for prettyness sake.
+        ksort($dc_xml);
         $writer = new XMLWriter();
         $writer->openMemory();
         $writer->startElement('oai_dc:dc');
         $writer->writeAttribute('xmlns:dc', 'http://purl.org/dc/elements/1.1/');
+        $writer->writeAttribute('xmlns:dcterms', 'http://purl.org/dc/terms/');
         $writer->writeAttribute('xmlns:oai_dc', 'http://www.openarchives.org/OAI/2.0/');
         foreach ($dc_xml as $key => $values) {
           foreach ($values as $value) {
@@ -248,10 +275,31 @@ function usc_mirc_oai_retrieve_records_or_identifiers($params) {
  *   The results generated from the crafted Solr query.
  */
 function usc_mirc_oai_query_solr($start = 0, $set = NULL, $date_query = NULL) {
+  global $user;
   $query_processor = new IslandoraSolrQueryProcessor();
   $query_processor->buildQuery('*:*');
   $query_processor->solrParams['fl'] = '*';
 
+  // Need to modify one of the FQs USC uses for Solr display results. This can
+  // have two possible values depending on the whether the user is logged in or
+  // not. Harvesters should crawl as anonymous but let's handle both cases
+  // anyway.
+  $pres_search = array('administrator', 'Creator', 'Editor', 'Manager');
+  $accepted_role = array_intersect($pres_search, $user->roles);
+
+  if (empty($accepted_role)) {
+    $fq_to_remove = "+rels_hasModel_uri_ms:(usc\:mezzanineCModel usc\:collectionCModel) +(pb_parent_title_Main_ms:[* TO *] mods_title_s:[* TO *])";
+  }
+  else {
+    $fq_to_remove = "+rels_hasModel_uri_ms:(usc\:mezzanineCModel usc\:collectionCModel usc\:vroCModel) +(pb_title_Main_ms:[* TO *] pb_parent_title_Main_ms:[* TO *] mods_title_s:[* TO *])";
+  }
+  $fq = $query_processor->solrParams['fq'];
+  $fq_remove_key = array_search($fq_to_remove, $fq);
+
+  if ($fq_remove_key) {
+    unset($fq[$fq_remove_key]);
+  }
+  $query_processor->solrParams['fq'] = $fq;
   if ($date_query) {
     $query_processor->solrParams['fq'][] = $date_query;
   }
@@ -269,7 +317,11 @@ function usc_mirc_oai_query_solr($start = 0, $set = NULL, $date_query = NULL) {
       $set_fq[] = $parent_solr_field . ':("' . $value . '")';
     }
     $query_processor->solrParams['fq'][] = '(' . implode(' OR ', $set_fq) . ')';
-    $query_processor->solrParams['fq'][] = 'rels_hasModel_uri_ms:"usc:mezzanineCModel"';
+    $query_processor->solrParams['fq'][] = '+rels_hasModel_uri_ms:"usc:mezzanineCModel"';
+  }
+  else {
+    // Limit to just mezzanines or collections if not inside a set.
+    $query_processor->solrParams['fq'][] = '+rels_hasModel_uri_ms:("usc:mezzanineCModel" OR "usc:collectionCModel")';
   }
   $query_processor->solrStart = $start;
   $query_processor->solrLimit = variable_get('islandora_oai_max_size', '20');
@@ -291,12 +343,14 @@ function usc_mirc_oai_query_solr($start = 0, $set = NULL, $date_query = NULL) {
  *   XPATH to be performed.
  * @param SimpleXMLElement $source
  *   The source XML document that is being XPATHed.
+ * @param string $type
+ *   The source of the XPaths, either mezz or pres respectively.
  *
  * @return array
  *   An array containing the DC key values mapped to their text values or FALSE
  *   if they did not exist.
  */
-function usc_mirc_oai_perform_xpath($xpaths, $source) {
+function usc_mirc_oai_perform_xpath($xpaths, $source, $type) {
   $dc_mappings = array();
   foreach ($xpaths as $dc => $xpath) {
     $xpath_result = $source->xpath($xpath);
@@ -305,6 +359,65 @@ function usc_mirc_oai_perform_xpath($xpaths, $source) {
       $dc_value[] = trim((string) $result);
     }
     $dc_mappings[$dc] = $dc_value;
+  }
+
+  if ($type == 'pres') {
+    // Handle some additional special cases for USC.
+    // PBCore Creator.
+    $creator_xpath = $source->xpath('pb:pbcoreCreator');
+    foreach ($creator_xpath as $creator) {
+      $creator_value = (string) $creator->creator;
+      if (isset($creator->creatorRole)) {
+        $creator_role = (string) $creator->creatorRole;
+      }
+      else {
+        $creator_role = FALSE;
+      }
+      $creator_string = format_string('!creator_value (!creator_role)', array(
+        '!creator_value' => $creator_value,
+        '!creator_role' => $creator_role ? $creator_role : 'No Role Provided',
+      ));
+      $dc_mappings['dc:creator'][] = $creator_string;
+    }
+
+    $contributor_xpath = $source->xpath('pb:pbcoreContributor');
+    foreach ($contributor_xpath as $contributor) {
+      $contributor_value = (string) $contributor->contributor;
+      if (isset($contributor->contributorRole)) {
+        $contributor_role = (string) $contributor->contributorRole;
+      }
+      else {
+        $contributor_role = FALSE;
+      }
+      $contributor_string = format_string('!contributor_value (!contributor_role)', array(
+        '!contributor_value' => $contributor_value,
+        '!contributor_role' => $contributor_role ? $contributor_role : 'No Role Provided',
+      ));
+      $dc_mappings['dc:contributor'][] = $contributor_string;
+    }
+
+    $coverage_xpath = $source->xpath('pb:pbcoreCoverage');
+    foreach ($coverage_xpath as $coverage) {
+      if (isset($coverage->coverageType)) {
+        $coverage_type = (string) $coverage->coverageType;
+        $coverage_type = strtolower($coverage_type);
+        $coverage_value = (string) $coverage->coverage;
+        $dc_mappings["dcterms:$coverage_type"][] = $coverage_value;
+      }
+    }
+  }
+  elseif ($type == 'mezz') {
+    $type_xpath = $source->xpath('pb:instantiationGenerations/text()');
+    if ($type_xpath) {
+      $type = (string) reset($type_xpath);
+      if ($type == 'Edited') {
+        $dc_mappings['dc:type'][] = 'This video has been edited by MIRC staff.';
+      }
+      elseif ($type == 'Part') {
+        $dc_mappings['dc:type'][] = 'This video constitutes a part of the moving image described.';
+      }
+    }
+    $dc_mappings['dcterms:medium'][] = 'Film';
   }
   return $dc_mappings;
 }
