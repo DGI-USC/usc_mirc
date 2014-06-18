@@ -405,6 +405,38 @@ function usc_mirc_oai_perform_xpath($xpaths, $source, $type) {
         $dc_mappings["dcterms:$coverage_type"][] = $coverage_value;
       }
     }
+
+    $created_date_xpaths = array(
+      'start' => 'pb:pbcoreAssetDate[@dateType="createdStart"]',
+      'end' => 'pb:pbcoreAssetDate[@dateType="createdEnd"]',
+    );
+    $created_date_parts = array();
+    foreach ($created_date_xpaths as $date) {
+      $created_date_xpath = $source->xpath($date);
+      if ($created_date_xpath) {
+        $created_date_string = (string) reset($created_date_xpath);
+        if (!isset($created_date_parts[$created_date_string])) {
+          $created_date_parts[$created_date_string] = $created_date_string;
+        }
+      }
+    }
+    $dc_mappings['dc:date'][] = implode(' - ', $created_date_parts);
+
+    $published_date_xpaths = array(
+      'start' => 'pb:pbcoreAssetDate[@dateType="publishedStart"]',
+      'end' => 'pb:pbcoreAssetDate[@dateType="publishedEnd"]',
+    );
+    $published_date_parts = array();
+    foreach ($published_date_xpaths as $date) {
+      $pubslished_date_xpath = $source->xpath($date);
+      if ($pubslished_date_xpath) {
+        $published_date_string = (string) reset($pubslished_date_xpath);
+        if (!isset($published_date_parts[$published_date_string])) {
+          $published_date_parts[$published_date_string] = $published_date_string;
+        }
+      }
+    }
+    $dc_mappings['dc:date'][] = implode(' - ', $published_date_parts);
   }
   elseif ($type == 'mezz') {
     $type_xpath = $source->xpath('pb:instantiationGenerations/text()');
