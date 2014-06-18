@@ -406,37 +406,28 @@ function usc_mirc_oai_perform_xpath($xpaths, $source, $type) {
       }
     }
 
-    $created_date_xpaths = array(
-      'start' => 'pb:pbcoreAssetDate[@dateType="createdStart"]',
-      'end' => 'pb:pbcoreAssetDate[@dateType="createdEnd"]',
-    );
-    $created_date_parts = array();
-    foreach ($created_date_xpaths as $date) {
-      $created_date_xpath = $source->xpath($date);
-      if ($created_date_xpath) {
-        $created_date_string = (string) reset($created_date_xpath);
-        if (!isset($created_date_parts[$created_date_string])) {
-          $created_date_parts[$created_date_string] = $created_date_string;
+    $collapse_dates = function($source, $date_xpaths) {
+      $date_parts = array();
+      foreach ($date_xpaths as $date) {
+        $date_xpath = $source->xpath($date);
+        if ($date_xpath) {
+          $date_string = (string) reset($date_xpath);
+          if (!isset($date_parts[$date_string])) {
+            $date_parts[$date_string] = $date_string;
+          }
         }
       }
-    }
-    $dc_mappings['dc:date'][] = implode(' - ', $created_date_parts);
+      return implode('-', $date_parts);
+    };
 
-    $published_date_xpaths = array(
-      'start' => 'pb:pbcoreAssetDate[@dateType="publishedStart"]',
-      'end' => 'pb:pbcoreAssetDate[@dateType="publishedEnd"]',
-    );
-    $published_date_parts = array();
-    foreach ($published_date_xpaths as $date) {
-      $pubslished_date_xpath = $source->xpath($date);
-      if ($pubslished_date_xpath) {
-        $published_date_string = (string) reset($pubslished_date_xpath);
-        if (!isset($published_date_parts[$published_date_string])) {
-          $published_date_parts[$published_date_string] = $published_date_string;
-        }
-      }
-    }
-    $dc_mappings['dc:date'][] = implode(' - ', $published_date_parts);
+    $dc_mappings['dc:date'][] = $collapse_dates($source, array(
+      'pb:pbcoreAssetDate[@dateType="createdStart"]',
+      'pb:pbcoreAssetDate[@dateType="createdEnd"]',
+    ));
+    $dc_mappings['dc:date'][] = $collapse_dates($source, array(
+      'pb:pbcoreAssetDate[@dateType="publishedStart"]',
+      'pb:pbcoreAssetDate[@dateType="publishedEnd"]',
+    ));
   }
   elseif ($type == 'mezz') {
     $type_xpath = $source->xpath('pb:instantiationGenerations/text()');
