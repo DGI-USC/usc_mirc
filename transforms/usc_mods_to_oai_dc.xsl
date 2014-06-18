@@ -11,6 +11,8 @@
     <xsl:template match="//mods:mods">
         <oai_dc:dc xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
             <xsl:apply-templates/>
+            <dc:type>Collection</dc:type>
+            <dc:publisher>University of South Carolina. Moving Image Research Collections</dc:publisher>
         </oai_dc:dc>
     </xsl:template>
 
