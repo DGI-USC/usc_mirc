@@ -65,7 +65,7 @@ function usc_mirc_menu() {
   );
   $items['usc/create_access_copy'] = array(
     'page callback' => 'usc_mirc_create_access_copy_callback',
-    'access arguments' => array(FEDORA_INGEST),
+    'access arguments' => array(ISLANDORA_INGEST),
     'file' => 'includes/access_copy.callback.inc',
     'type' => MENU_CALLBACK,
   );
@@ -114,7 +114,7 @@ function usc_mirc_ingest_access(FedoraObject $object) {
     'usc:vroCModel',
   );
 
-  if (islandora_object_access(FEDORA_ADD_DS, $object)) {
+  if (islandora_object_access(ISLANDORA_ADD_DS, $object)) {
     if (array_intersect($usc_models, $object->models)) {
       return TRUE;
     }
