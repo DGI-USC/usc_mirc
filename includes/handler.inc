@@ -93,19 +93,22 @@ function usc_mirc_oai_object_response_xml($params) {
         $mezz_dc = usc_mirc_oai_perform_xpath($mezz_defined_mappings, $mezz_pbcore_xml, 'mezz');
         $mezz_parent = usc_mirc_get_mezzanine_parent($object);
         $mezz_parent_object = islandora_object_load($mezz_parent);
-        // Get the collection for use in dcterms.
-        $collection_rels = $mezz_parent_object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
-        $collection_label = FALSE;
-        if ($collection_rels) {
-          $member = reset($collection_rels);
-          $collection = $member['object']['value'];
-          $collection_object = islandora_object_load($collection);
-          if ($collection_object && islandora_object_access(ISLANDORA_VIEW_OBJECTS, $collection_object)) {
-            if (!isset($mezz_dc['dcterms:isPartOf'])) {
-              $mezz_dc['dcterms:isPartOf'] = array();
+        // This shouldn't happen but let's cover our bases.
+        if ($mezz_parent_object) {
+          // Get the collection for use in dcterms.
+          $collection_rels = $mezz_parent_object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
+          $collection_label = FALSE;
+          if ($collection_rels) {
+            $member = reset($collection_rels);
+            $collection = $member['object']['value'];
+            $collection_object = islandora_object_load($collection);
+            if ($collection_object && islandora_object_access(ISLANDORA_VIEW_OBJECTS, $collection_object)) {
+              if (!isset($mezz_dc['dcterms:isPartOf'])) {
+                $mezz_dc['dcterms:isPartOf'] = array();
+              }
+              $mezz_dc['dcterms:isPartOf'][] = $collection_object->id;
+              $collection_label = $collection_object->label;
             }
-            $mezz_dc['dcterms:isPartOf'][] = $collection_object->id;
-            $collection_label = $collection_object->label;
           }
         }
         // Will only be a member of one preservation master.
