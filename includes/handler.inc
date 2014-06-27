@@ -464,7 +464,7 @@ function usc_mirc_oai_perform_xpath($xpaths, $source, $type) {
  *   -solr_doc (array): The Solr doc for the record.
  *
  * @see hook_islandora_oai_identify_request_handler()
- **/
+ */
 function usc_mirc_oai_get_record($params) {
   // Make use of the OAI query function with one more check layered on top.
   module_load_include('inc', 'islandora_oai', 'includes/handler');
