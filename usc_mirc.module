@@ -1688,6 +1688,10 @@ function usc_mirc_islandora_oai_identify_request_handler() {
           'file' => drupal_get_path('module', 'usc_mirc') . '/includes/handler.inc',
           'function' => 'usc_mirc_oai_retrieve_sets',
         ),
+        'GetRecord' => array(
+          'file' => drupal_get_path('module', 'usc_mirc') . '/includes/handler.inc',
+          'function' => 'usc_mirc_oai_get_record',
+        ),
         'response_xml' => array(
           'file' => drupal_get_path('module', 'usc_mirc') . '/includes/handler.inc',
           'function' => 'usc_mirc_oai_object_response_xml',

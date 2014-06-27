@@ -93,17 +93,22 @@ function usc_mirc_oai_object_response_xml($params) {
         $mezz_dc = usc_mirc_oai_perform_xpath($mezz_defined_mappings, $mezz_pbcore_xml, 'mezz');
         $mezz_parent = usc_mirc_get_mezzanine_parent($object);
         $mezz_parent_object = islandora_object_load($mezz_parent);
-        // Get the collection for use in dcterms.
-        $collection_rels = $mezz_parent_object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
-        if ($collection_rels) {
-          $member = reset($collection_rels);
-          $collection = $member['object']['value'];
-          $collection_object = islandora_object_load($collection);
-          if ($collection_object && islandora_object_access(ISLANDORA_VIEW_OBJECTS, $collection_object)) {
-            if (!isset($mezz_dc['dcterms:isPartOf'])) {
-              $mezz_dc['dcterms:isPartOf'] = array();
+        // This shouldn't happen but let's cover our bases.
+        if ($mezz_parent_object) {
+          // Get the collection for use in dcterms.
+          $collection_rels = $mezz_parent_object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
+          $collection_label = FALSE;
+          if ($collection_rels) {
+            $member = reset($collection_rels);
+            $collection = $member['object']['value'];
+            $collection_object = islandora_object_load($collection);
+            if ($collection_object && islandora_object_access(ISLANDORA_VIEW_OBJECTS, $collection_object)) {
+              if (!isset($mezz_dc['dcterms:isPartOf'])) {
+                $mezz_dc['dcterms:isPartOf'] = array();
+              }
+              $mezz_dc['dcterms:isPartOf'][] = $collection_object->id;
+              $collection_label = $collection_object->label;
             }
-            $mezz_dc['dcterms:isPartOf'][] = $collection_object->id;
           }
         }
         // Will only be a member of one preservation master.
@@ -134,7 +139,7 @@ function usc_mirc_oai_object_response_xml($params) {
         if (!isset($dc_xml['dc:publisher'])) {
           $dc_xml['dc:publisher'] = array();
         }
-        $dc_xml['dc:publisher'][] = 'University of South Carolina. Moving Image Research Collections';
+        $dc_xml['dc:publisher'][] = format_string('University of South Carolina. @collection_label', array('@collection_label' => $collection_label ? $collection_label : 'Moving Image Research Collections'));
         // Sort the array for prettyness sake.
         ksort($dc_xml);
         $writer = new XMLWriter();
@@ -434,13 +439,44 @@ function usc_mirc_oai_perform_xpath($xpaths, $source, $type) {
     if ($type_xpath) {
       $type = (string) reset($type_xpath);
       if ($type == 'Edited') {
-        $dc_mappings['dc:type'][] = 'This video has been edited by MIRC staff.';
+        $dc_mappings['dc:description'][] = 'This video has been edited by MIRC staff.';
       }
       elseif ($type == 'Part') {
-        $dc_mappings['dc:type'][] = 'This video constitutes a part of the moving image described.';
+        $dc_mappings['dc:description'][] = 'This video constitutes a part of the moving image described.';
       }
     }
     $dc_mappings['dcterms:medium'][] = 'Film';
   }
   return $dc_mappings;
+}
+
+/**
+ * Handles the GetRecord request.
+ *
+ * @param array $params
+ *   An array containing:
+ *   -pid (string): The pid of the record being requested.
+ *
+ * @return array|bool
+ *   FALSE if the record does not exist, otherwise an array containing:
+ *   -pid (string): The pid of the record.
+ *   -date (string): The date timestamp of the record.
+ *   -solr_doc (array): The Solr doc for the record.
+ *
+ * @see hook_islandora_oai_identify_request_handler()
+ */
+function usc_mirc_oai_get_record($params) {
+  // Make use of the OAI query function with one more check layered on top.
+  module_load_include('inc', 'islandora_oai', 'includes/handler');
+  $record = islandora_oai_retrieve_record($params);
+  if ($record) {
+    $solr_model_field = variable_get('islandora_solr_content_model_field', 'RELS_EXT_hasModel_uri_ms');
+    if (isset($record['solr_doc'][$solr_model_field])) {
+      $models = $record['solr_doc'][$solr_model_field];
+      if (array_intersect($models, array('usc:collectionCModel', 'usc:mezzanineCModel'))) {
+        return $record;
+      }
+    }
+  }
+  return FALSE;
 }
