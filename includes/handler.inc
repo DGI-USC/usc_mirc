@@ -27,7 +27,7 @@ function usc_mirc_oai_retrieve_sets($params) {
   $connection = islandora_get_tuque_connection();
   $records = array();
   $filters = array(
-    'sameTerm(?model, <info:fedora/islandora:collectionCModel>)',
+    'sameTerm(?model, <info:fedora/usc:collectionCModel>)',
   );
   $required = array(
     'statements' => array(
