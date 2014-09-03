@@ -433,6 +433,7 @@ function usc_mirc_oai_perform_xpath($xpaths, $source, $type) {
       'pb:pbcoreAssetDate[@dateType="publishedStart"]',
       'pb:pbcoreAssetDate[@dateType="publishedEnd"]',
     ));
+    $dc_mappings['dc:date'] = array_filter($dc_mappings['dc:date']);
   }
   elseif ($type == 'mezz') {
     $type_xpath = $source->xpath('pb:instantiationGenerations/text()');
