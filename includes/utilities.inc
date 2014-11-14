@@ -24,16 +24,20 @@
  */
 function usc_mirc_get_image_markup($pid, $alt = '', $title = '', $imagecache_preset = NULL) {
   $object = islandora_object_load($pid);
-  $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
-
-  $dsid = '';
-  if ($object['IMG']) {
-    $dsid = 'IMG';
+  if ($object) {
+    $imagecache_preset = variable_get('usc_mirc_imagecache_thumbnail_preset', 'usc_mirc_thumbnail');
+    $dsid = '';
+    if ($object['IMG']) {
+      $dsid = 'IMG';
+    }
+    else {
+      $dsid = 'TN';
+    }
+    $image = usc_mirc_get_imagecache_token_url($object, $dsid);
   }
   else {
-    $dsid = 'TN';
+    $image = drupal_get_path('module', 'islandora_solr') . '/images/defaultimg.png';
   }
-  $image = usc_mirc_get_imagecache_token_url($object, $dsid);
 
   if (module_exists('imagecache_external') && is_callable('theme_imagecache_external')) {
     return theme('imagecache_external', array(
