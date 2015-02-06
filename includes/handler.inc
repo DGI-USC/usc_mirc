@@ -124,7 +124,6 @@ function usc_mirc_oai_object_response_xml($params) {
             'dcterms:alternative' => 'pb:pbcoreTitle[not(@titleType="Main") and normalize-space(text())]',
             'dc:subject' => 'pb:pbcoreSubject[text()] | pb:pbcoreGenre[text()]',
             'dc:description' => 'pb:pbcoreDescription[@descriptionType="summary" and text()]',
-            'dc:coverage' => 'pb:pbcoreCoverage[pb:coverageType[text() = "Spatial"]]/pb:coverage[text()]/text()',
             'dc:format' => 'pb:pbcoreDescription[@descriptionType="sound content"]/text()',
             'dc:rights' => 'pb:pbcoreRightsSummary/pb:rightsSummary[@source="copyright_statement"]/text()',
           );
@@ -140,6 +139,16 @@ function usc_mirc_oai_object_response_xml($params) {
           $dc_xml['dc:publisher'] = array();
         }
         $dc_xml['dc:publisher'][] = format_string('University of South Carolina. @collection_label', array('@collection_label' => $collection_label ? $collection_label : 'Moving Image Research Collections'));
+
+        // Add a thumbnail for WorldCat.
+        if (isset($object['TN'])) {
+          $thumb_url = url("islandora/object/{$object->id}/datastream/TN/view/{$object->label}.jpg", array(
+            'absolute' => TRUE,
+            'language' => NULL,
+          ));
+          $dc_xml['dc:identifier.thumbnail'][] = $thumb_url;
+        }
+
         // Sort the array for prettyness sake.
         ksort($dc_xml);
         $writer = new XMLWriter();
@@ -166,6 +175,13 @@ function usc_mirc_oai_object_response_xml($params) {
         $xslt->importStylesheet($xsl);
         $mods_xml = new DOMDocument();
         $mods_xml->loadXML($object['MODS']->content);
+        if (isset($object['TN'])) {
+          $thumb_url = url("islandora/object/{$object->id}/datastream/TN/view/{$object->label}.jpg", array(
+            'absolute' => TRUE,
+            'language' => NULL,
+          ));
+          $xslt->setParameter('', 'thumbnail_url', $thumb_url);
+        }
         return $xslt->transformToXml($mods_xml);
       }
       else {
