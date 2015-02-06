@@ -13,7 +13,7 @@
         <oai_dc:dc xsi:schemaLocation="http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd">
             <xsl:apply-templates/>
             <xsl:if test="$thumbnail_url">
-                <dc:identifer.thumbanil><xsl:value-of select="$thumbnail_url"/></dc:identifer.thumbanil>
+                <dc:identifer.thumbnail><xsl:value-of select="$thumbnail_url"/></dc:identifer.thumbnail>
             </xsl:if>
             <dc:type>Collection</dc:type>
             <dc:publisher>University of South Carolina. Moving Image Research Collections</dc:publisher>
