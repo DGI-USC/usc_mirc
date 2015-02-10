@@ -12,7 +12,7 @@ function usc_mirc_drush_command() {
   $commands = array();
 
   $commands['usc-mirc-update-mezzanines'] = array(
-    'description' => dt('Update existing Mezzanines to generate Handles in PBCore and transform to DC.'),
+    'description' => dt('Update existing Mezzanines to generate Handles in PBCore and transform to DC. Note that the --uri option needs to be set to the current site as not specifying one will cause Drupal to use http://default when constructing URLs.'),
     'drupal dependencies' => array(
       'usc_mirc',
       'islandora_handle',
@@ -25,7 +25,7 @@ function usc_mirc_drush_command() {
       ),
     ),
     'examples' => array(
-      'drush -u 1 islandora-scholar-update-citations' => dt('Updating existing citations with PDF derivatives.'),
+      'drush -u 1 --uri=http://mirc.sc.edu usc-mirc-update-mezzanines' => dt('Updating existing citations with PDF derivatives.'),
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
