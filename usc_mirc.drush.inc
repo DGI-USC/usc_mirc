@@ -44,13 +44,7 @@ function drush_usc_mirc_update_mezzanines() {
  * Constructs a batch used to update things via Drush.
  */
 function usc_mirc_update_mezzanines_create_batch() {
-  $commit = drush_get_option('commit', 'FALSE');
-  if ($commit !== 'TRUE') {
-    $commit = FALSE;
-  }
-  else {
-    $commit = TRUE;
-  }
+  $commit = drush_get_option('commit', 'FALSE') === 'TRUE';
   return array(
     'operations' => array(
       array('usc_mirc_update_mezzanine_batch_operation', array($commit)),
@@ -207,7 +201,7 @@ EOQ;
   $tuque = islandora_get_tuque_connection();
   $results = $tuque->repository->ri->sparqlQuery($query);
   $result = reset($results);
-  return $result['k0']['value'] === 'false' ? FALSE : TRUE;
+  return $result['k0']['value'] !== 'false';
 }
 
 /**
@@ -227,5 +221,5 @@ function usc_mirc_xpath_pbcore_for_handle(AbstractObject $object) {
   $pbcore_xml = simplexml_load_string($object['PBCORE']->content);
   $pbcore_xml->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
   $result = $pbcore_xml->xpath('//pb:instantiationIdentifier[@source="hdl"]');
-  return empty($result) ? FALSE : TRUE;
+  return !empty($result);
 }
