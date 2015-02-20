@@ -159,7 +159,7 @@ EOQ;
     drush_log(dt('Creating a Handle and updating the PBCore and DC for @pid.', array('@pid' => $object_to_update->id)));
     if ($commit) {
       $handle_creation = islandora_handle_append_handles_from_configuration($object_to_update);
-      if ($handle_creation) {
+      if ($handle_creation['success']) {
         drush_log(dt('Successfully created a Handle and appended to PBCore for @pid.', array('@pid' => $object_to_update->id)));
         $dc_update = islandora_handle_add_to_dc_datastream($object_to_update);
         if ($dc_update['success']) {
