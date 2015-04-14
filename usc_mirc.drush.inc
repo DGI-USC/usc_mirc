@@ -159,14 +159,17 @@ EOQ;
     drush_log(dt('Creating a Handle and updating the PBCore and DC for @pid.', array('@pid' => $object_to_update->id)));
     if ($commit) {
       $handle_creation = islandora_handle_append_handles_from_configuration($object_to_update);
-      if ($handle_creation) {
+      if ((isset($handle_creation['success']) && $handle_creation['success']) || !$handle_creation) {
         drush_log(dt('Successfully created a Handle and appended to PBCore for @pid.', array('@pid' => $object_to_update->id)));
         $dc_update = islandora_handle_add_to_dc_datastream($object_to_update);
-        if ($dc_update['success']) {
+        if (isset($dc_update['success']) && $dc_update['success']) {
           drush_log(dt('Successfully updated the Dublin Core with a Handle for @pid.', array('@pid' => $object_to_update->id)));
         }
-        else {
+        elseif (isset($dc_update['success']) && !$dc_update['success']) {
           drush_log(dt('Unable to append the Handle to Dublin Core for @pid.', array('@pid' => $object_to_update->id)));
+        }
+        else {
+          drush_log(dt('Handle already exists in the Dublin Core for @pid.', array('@pid' => $object_to_update->id)));
         }
       }
       else {
