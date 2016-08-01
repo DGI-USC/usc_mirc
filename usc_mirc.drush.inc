@@ -29,6 +29,24 @@ function usc_mirc_drush_command() {
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
+  $commands['usc-mirc-lift-xacml'] = array(
+    'description' => dt('Lift XACML policies on a given collection object.'),
+    'drupal dependencies' => array(
+      'usc_mirc',
+      'islandora',
+      'islandora_xacml_editor',
+    ),
+    'options' => array(
+      'dryrun' => array(
+        'description' => dt('Whether we are doing a test run or not, defaults to FALSE if not specified.'),
+        'required' => FALSE,
+      ),
+      'parent_collection' => array(
+        'description' => dt('The PID of the parent collection to lift the XACML policy for.'),
+        'required' => TRUE,
+      ),
+    ),
+  );
   return $commands;
 }
 
@@ -222,4 +240,140 @@ function usc_mirc_xpath_pbcore_for_handle(AbstractObject $object) {
   $pbcore_xml->registerXPathNamespace('pb', 'http://www.pbcore.org/PBCore/PBCoreNamespace.html');
   $result = $pbcore_xml->xpath('//pb:instantiationIdentifier[@source="hdl"]');
   return !empty($result);
+}
+
+
+/**
+ * Drush command callback to lift XACML.
+ */
+function drush_usc_mirc_lift_xacml() {
+  batch_set(usc_lift_xacml_batch(drush_get_option('parent_collection'), drush_get_option('dryrun', FALSE)));
+  drush_backend_batch_process();
+}
+
+/**
+ * Drush command validation for the lifting of XACML policies.
+ */
+function drush_usc_mirc_lift_xacml_validate() {
+  $parent = drush_get_option('parent_collection');
+  $object = islandora_object_load($parent);
+  if (!$object || !in_array('usc:collectionCModel', $object->models)) {
+    drush_set_error(dt('The specified PID, @pid, does not exist or is not a collection.', array(
+      '@pid' => $parent,
+    )));
+  }
+}
+
+/**
+ * Constructs a batch to lift XACML policies.
+ */
+function usc_lift_xacml_batch($parent, $dryrun) {
+  return array(
+    'operations' => array(
+      array(
+        'usc_lift_xacml_batch_operation',
+        array($parent, $dryrun),
+      ),
+    ),
+    'title' => t('Lifting XACML policies...'),
+    'init_message' => t('Preparing to lift XACML policiies.'),
+    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaining @estimate.'),
+    'error_message' => t('An error has occurred.'),
+  );
+}
+
+/**
+ * Batch operation to lift an XACML policy.
+ */
+function usc_lift_xacml_batch_operation($parent, $dryrun, &$context) {
+  module_load_include('inc', 'islandora_xacml_editor', 'includes/batch');
+  $sandbox = &$context['sandbox'];
+  drupal_static_reset('islandora_get_tuque_connection');
+  $tuque = islandora_get_tuque_connection();
+
+  $query = <<<EOQ
+PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
+PREFIX fm: <info:fedora/fedora-system:def/model#>
+SELECT ?object ?created FROM <#ri> WHERE {
+  { ?sub fm:hasModel <info:fedora/usc:collectionCModel>
+    {
+      ?vro fre:isMemberOfCollection ?sub .
+      ?mezz fre:isDerivativeOf ?vro .
+      ?object fre:isDerivativeOf ?mezz
+    }
+    UNION { ?vro fre:isMemberOfCollection ?sub . ?object fre:isDerivativeOf ?vro }
+    UNION { ?object fre:isMemberOfCollection ?sub }
+  }
+  UNION {
+    ?sub fm:hasModel <info:fedora/usc:vroCModel> .
+    ?object fre:isDerivativeOf ?sub .
+  }
+  ?object fm:state fm:Active ;
+          fm:createdDate ?created
+  FILTER(sameTerm(?sub, <info:fedora/!parent>))
+  !filter
+}
+ORDER BY ?created
+
+EOQ;
+  // One time, update the parent first.
+  if (!isset($sandbox['parent_policy_xml'])) {
+    $parent_object = islandora_object_load($parent);
+    $xacml = new IslandoraXacml($parent_object);
+    $xacml->datastreamRule->clear();
+    $xacml->managementRule->clear();
+    $xacml->viewingRule->clear();
+    if (!$dryrun) {
+      $xacml->writeBackToFedora();
+    }
+    $sandbox['parent_policy_xml'] = $xacml->getXmlString();
+    drush_log(dt('Removed POLICY from the collection @pid.', array('@pid' => $parent)));
+  }
+  if (!isset($sandbox['total'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['total'] = $tuque->repository->ri->countQuery(format_string($query, array(
+      '!parent' => $parent,
+      '!filter' => '',
+    )), 'sparql');
+    if ($sandbox['total'] == 0) {
+      $context['finished'] = 1;
+      $context['message'] = t('Nothing to lift.');
+      return;
+    }
+    $sandbox['result_stash'] = array();
+  }
+  if (empty($sandbox['result_stash'])) {
+    $limited_query = format_string($query, array(
+      '!parent' => $parent,
+      '!filter' => (isset($sandbox['last_date']) ?
+            "FILTER(?created > \"{$sandbox['last_date']}\"^^<xsd:dateTime>)" :
+            ''),
+    )) . <<<EOQ
+LIMIT 1000
+EOQ;
+    drush_log(dt('Querying for 1000 objects.'));
+    $sandbox['result_stash'] = $tuque->repository->ri->sparqlQuery($limited_query);
+    if (empty($sandbox['result_stash'])) {
+      // Ran out of items early?
+      $context['finished'] = 1;
+      $context['message'] = t('Updated @count PID(s) and ran out of items early... Somebody manually updated a document?', array(
+        '@count' => $sandbox['total'],
+      ));
+      return;
+    }
+  }
+  $result = array_shift($sandbox['result_stash']);
+  $updating_pid = $result['object']['value'];
+  $sandbox['last_date'] = $result['created']['value'];
+  if (!$dryrun) {
+    $policy_update = new IslandoraUpdatePolicy($updating_pid, $sandbox['parent_policy_xml']);
+    $policy_update->updatePolicy();
+  }
+  drush_log(dt('Lifting the POLICY from @pid.', array('@pid' => $updating_pid)));
+  $sandbox['progress'] = min($sandbox['total'], $sandbox['progress'] + 1);
+  $context['finished'] = $sandbox['progress'] / $sandbox['total'];
+  $context['message'] = t('Updated @progress of @total.', array(
+    '@progress' => $sandbox['progress'],
+    '@total' => $sandbox['total'],
+  ));
 }
