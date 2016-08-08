@@ -1704,3 +1704,7 @@ function usc_mirc_islandora_oai_identify_request_handler() {
     ),
   );
 }
+
+function usc_mirc_menu_alter(&$items) {
+  unset($items['islandora/object/%islandora_object/print_object']);
+}

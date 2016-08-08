@@ -299,7 +299,10 @@ function usc_mirc_oai_query_solr($start = 0, $set = NULL, $date_query = NULL) {
   global $user;
   $query_processor = new IslandoraSolrQueryProcessor();
   $query_processor->buildQuery('*:*');
-  $query_processor->solrParams['fl'] = '*';
+  $fl_fields = islandora_oai_get_membership_array();
+  $fl_fields[] = 'PID';
+  $fl_fields[] = variable_get('islandora_oai_date_field', 'fgs_lastModifiedDate_dt');
+  $query_processor->solrParams['fl'] = implode(',', $fl_fields);
 
   // Need to modify one of the FQs USC uses for Solr display results. This can
   // have two possible values depending on the whether the user is logged in or
