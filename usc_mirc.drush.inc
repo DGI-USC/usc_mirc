@@ -313,15 +313,11 @@ function usc_lift_xacml_batch_operation($parent, $file, $dryrun, &$context) {
   if (empty($sandbox['result_stash'])) {
     drush_log(dt('Reading file for PIDs.'));
     module_load_include('inc', 'islandora', 'includes/utilities');
-    $csv = array_map('str_getcsv', file($file));
-    // Munge into our stash.
-    foreach ($csv as $line) {
-      $value = reset($line);
-      $value = str_replace('info:fedora/', '', $value);
-      if (!empty($value) && islandora_is_valid_pid($value)) {
-        $sandbox['result_stash'][] = $value;
-      }
-    }
+    $to_bare_pid = function ($line) {
+      $values = str_getcsv($line);
+      return str_replace('info:fedora/', '', reset($values));
+    };
+    $sandbox['result_stash'] = array_filter(array_map($to_bare_pid, file($file)), 'islandora_is_valid_pid');
     if (empty($sandbox['result_stash'])) {
       // Ran out of items early?
       $context['finished'] = 1;
