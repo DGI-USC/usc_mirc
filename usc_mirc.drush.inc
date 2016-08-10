@@ -45,6 +45,10 @@ function usc_mirc_drush_command() {
         'description' => dt('The PID of the parent collection to lift the XACML policy for.'),
         'required' => TRUE,
       ),
+      'file' => array(
+        'description' => dt('The path to the CSV containing pids in the form returned from the RI (optionally including "info:fedora/").'),
+        'required' => TRUE,
+      ),
     ),
   );
   return $commands;
@@ -251,7 +255,7 @@ function usc_mirc_xpath_pbcore_for_handle(AbstractObject $object) {
  * Drush command callback to lift XACML.
  */
 function drush_usc_mirc_lift_xacml() {
-  batch_set(usc_lift_xacml_batch(drush_get_option('parent_collection'), drush_get_option('dryrun', FALSE)));
+  batch_set(usc_lift_xacml_batch(drush_get_option('parent_collection'), drush_get_option('file'), drush_get_option('dryrun', FALSE)));
   drush_backend_batch_process();
 }
 
@@ -266,17 +270,21 @@ function drush_usc_mirc_lift_xacml_validate() {
       '@pid' => $parent,
     )));
   }
+  $file = drush_get_option('file');
+  if (!file_exists($file)) {
+    drush_set_error('usc_mirc', 'File does not exist.');
+  }
 }
 
 /**
  * Constructs a batch to lift XACML policies.
  */
-function usc_lift_xacml_batch($parent, $dryrun) {
+function usc_lift_xacml_batch($parent, $file, $dryrun) {
   return array(
     'operations' => array(
       array(
         'usc_lift_xacml_batch_operation',
-        array($parent, $dryrun),
+        array($parent, $file, $dryrun),
       ),
     ),
     'title' => t('Lifting XACML policies...'),
@@ -289,37 +297,10 @@ function usc_lift_xacml_batch($parent, $dryrun) {
 /**
  * Batch operation to lift an XACML policy.
  */
-function usc_lift_xacml_batch_operation($parent, $dryrun, &$context) {
+function usc_lift_xacml_batch_operation($parent, $file, $dryrun, &$context) {
   module_load_include('inc', 'islandora_xacml_editor', 'includes/batch');
   $sandbox = &$context['sandbox'];
-  drupal_static_reset('islandora_get_tuque_connection');
-  $tuque = islandora_get_tuque_connection();
 
-  $query = <<<EOQ
-PREFIX fre: <info:fedora/fedora-system:def/relations-external#>
-PREFIX fm: <info:fedora/fedora-system:def/model#>
-SELECT ?object ?created FROM <#ri> WHERE {
-  { ?sub fm:hasModel <info:fedora/usc:collectionCModel>
-    {
-      ?vro fre:isMemberOfCollection ?sub .
-      ?mezz fre:isDerivativeOf ?vro .
-      ?object fre:isDerivativeOf ?mezz
-    }
-    UNION { ?vro fre:isMemberOfCollection ?sub . ?object fre:isDerivativeOf ?vro }
-    UNION { ?object fre:isMemberOfCollection ?sub }
-  }
-  UNION {
-    ?sub fm:hasModel <info:fedora/usc:vroCModel> .
-    ?object fre:isDerivativeOf ?sub .
-  }
-  ?object fm:state fm:Active ;
-          fm:createdDate ?created
-  FILTER(sameTerm(?sub, <info:fedora/!parent>))
-  !filter
-}
-ORDER BY ?created
-
-EOQ;
   // One time, update the parent first.
   if (!isset($sandbox['parent_policy_xml'])) {
     $parent_object = islandora_object_load($parent);
@@ -333,51 +314,28 @@ EOQ;
     $sandbox['parent_policy_xml'] = $xacml->getXmlString();
     drush_log(dt('Removed POLICY from the collection @pid.', array('@pid' => $parent)));
   }
-  if (!isset($sandbox['total'])) {
-    $sandbox['progress'] = 0;
-    $sandbox['total'] = $tuque->repository->ri->countQuery(format_string($query, array(
-      '!parent' => $parent,
-      '!filter' => '',
-    )), 'sparql');
-    if ($sandbox['total'] == 0) {
-      $context['finished'] = 1;
-      $context['message'] = t('Nothing to lift.');
-      return;
-    }
-    $sandbox['result_stash'] = array();
-  }
   if (empty($sandbox['result_stash'])) {
-    $limited_query = format_string($query, array(
-      '!parent' => $parent,
-      '!filter' => (isset($sandbox['last_date']) ?
-            "FILTER(?created > \"{$sandbox['last_date']}\"^^<xsd:dateTime>)" :
-            ''),
-    )) . <<<EOQ
-LIMIT 1000
-EOQ;
-    drush_log(dt('Querying for 1000 objects.'));
-    $sandbox['result_stash'] = $tuque->repository->ri->sparqlQuery($limited_query);
+    drush_log(dt('Reading file for PIDs.'));
+    module_load_include('inc', 'islandora', 'includes/utilities');
+    $to_bare_pid = function ($line) {
+      $values = str_getcsv($line);
+      return str_replace('info:fedora/', '', reset($values));
+    };
+    $sandbox['result_stash'] = array_filter(array_map($to_bare_pid, file($file)), 'islandora_is_valid_pid');
     if (empty($sandbox['result_stash'])) {
       // Ran out of items early?
       $context['finished'] = 1;
-      $context['message'] = t('Updated @count PID(s) and ran out of items early... Somebody manually updated a document?', array(
+      $context['message'] = t('Specified CSV contained no PIDs to update.', array(
         '@count' => $sandbox['total'],
       ));
       return;
     }
   }
-  $result = array_shift($sandbox['result_stash']);
-  $updating_pid = $result['object']['value'];
-  $sandbox['last_date'] = $result['created']['value'];
+  $updating_pid = array_shift($sandbox['result_stash']);
   if (!$dryrun) {
     $policy_update = new IslandoraUpdatePolicy($updating_pid, $sandbox['parent_policy_xml']);
     $policy_update->updatePolicy();
   }
   drush_log(dt('Lifting the POLICY from @pid.', array('@pid' => $updating_pid)));
-  $sandbox['progress'] = min($sandbox['total'], $sandbox['progress'] + 1);
-  $context['finished'] = $sandbox['progress'] / $sandbox['total'];
-  $context['message'] = t('Updated @progress of @total.', array(
-    '@progress' => $sandbox['progress'],
-    '@total' => $sandbox['total'],
-  ));
+  $context['finished'] = empty($sandbox['result_stash']);
 }
