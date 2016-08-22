@@ -38,7 +38,7 @@ function usc_mirc_drush_command() {
     ),
     'options' => array(
       'dryrun' => array(
-        'description' => dt('Whether we are doing a test run or not, defaults to FALSE if not specified.'),
+        'description' => dt('Whether we are doing a test run or not, if provided will not commit changes.'),
         'required' => FALSE,
       ),
       'parent_collection' => array(
