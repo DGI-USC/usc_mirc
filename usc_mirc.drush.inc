@@ -39,7 +39,7 @@ function usc_mirc_drush_command() {
     'options' => array(
       'dryrun' => array(
         'description' => dt('Whether we are doing a test run or not, if provided will not commit changes.'),
-        'required' => FALSE,
+        'value' => 'optional',
       ),
       'parent_collection' => array(
         'description' => dt('The PID of the parent collection to lift the XACML policy for.'),
